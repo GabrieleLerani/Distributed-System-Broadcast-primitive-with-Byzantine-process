@@ -6,22 +6,26 @@ from threading import Thread
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
 class AuthenticatedLink:
-    def __init__(self, selfid, id, proc, ip):
+    def __init__(self, selfid, selfip, id, ip, proc):
         self.proc = proc
         self.selfid = selfid   #id del processo che invia
         self.id = id           #id del processo che riceve
+        self.selfip = selfip
         self.ip = ip
-        thread = Thread(target = self.__list, args = [self.selfid, self.id])
-        thread.run()
         #TODO
         self.key = []
 
-    def __list(self, selfid, id):
+    def receiver(self):
+        print("Start thread...")
+        t = Thread(target=self.__receive)
+        t.start()
+
+    def __receive(self):
         host = ''  # Symbolic name meaning all available interfaces
-        if selfid < 10 and id < 10:
-            port = int("50" + id + selfid)
+        if self.selfid < 10 and self.id < 10:
+            port = int("50" + str(self.id) + str(self.selfid))   #prima conversione in string per concatenarli e poi riconversione in int
         else:
-            port = int("5" + id + selfid)
+            port = int("5" + str(self.id) + str(self.selfid))   #prima conversione in string per concatenarli e poi riconversione in int
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((host, port))
             s.listen(0)
