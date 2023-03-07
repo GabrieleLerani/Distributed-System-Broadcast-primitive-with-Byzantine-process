@@ -1,8 +1,11 @@
 import AuthenticatedLink
 from threading import Thread
+import socket
 
 class Process:
     def __init__(self):
+        self.ids = []
+        self.ips = []
         self.currentMSG = []
         self.id = 0
         self.processes = []
@@ -15,8 +18,34 @@ class Process:
         self.echos = []
         self.readys = []
         self.faulty = len(self.processes) / 3
-        thread = Thread(target=self.__thread)
-        thread.run()
+    #    thread = Thread(target=self.__thread)
+    #    thread.run()
+
+    def conn(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s:
+            self.s.connect(('192.168.1.14', 5000))
+            mess = bytes("Hello", "utf-8")
+            self.s.sendall(mess)
+            data = self.s.recv(1024)
+        port = 5000 + int(data)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
+            self.sock.connect(('192.168.1.14', port))
+            mess = bytes("Hello", "utf-8")
+            self.sock.sendall(mess)
+            if self.sock.recv(1024).decode("utf-8") == "IDS":
+                while 1:
+                    id = self.sock.recv(1024).decode("utf-8")
+                    if id == "IPS":
+                        break
+                    self.ids.append(id)
+                    self.sock.sendall(bytes(id, "utf-8"))
+                while 1:
+                    ip = self.sock.recv(1024).decode("utf-8")
+                    if ip == "END":
+                        break
+                    self.ips.append(ip)
+                    self.sock.sendall(bytes(ip, "utf-8"))
+        print(self.ids, self.ips)
 
     def __thread(self):
         while True:   #migliorare l'efficienza
