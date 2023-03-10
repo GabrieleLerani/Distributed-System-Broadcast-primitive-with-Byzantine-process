@@ -2,6 +2,7 @@ import socket
 import sys
 from threading import Thread
 import pika
+import json
 
 IP = '192.168.27.119'
 PORT = 5000
@@ -57,7 +58,7 @@ class TCP_SERVER:
                             self.IDS.append(self.IDS_size)
                         self.t += 1
                         # creating thread
-                        t = Thread(target=self.thread_conn, args=(self.t,))
+                        t = Thread(target=self.thread_conn, args=(self.t, client_address))
                         t.start()
                         # sending information
                         connection.sendall(bytes(str(self.t), 'utf-8'))
@@ -70,7 +71,7 @@ class TCP_SERVER:
                 # Clean up the connection
                 connection.close()
 
-    def thread_conn(self, t):
+    def thread_conn(self, t, c_address):
 
         # Create a TCP/IP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -97,17 +98,17 @@ class TCP_SERVER:
                     if data:
                         print(sys.stderr, 'sending data back to the client')
                         # sending back to client process the address of the socket's thread
-                        connection.sendall(bytes("IDS", 'utf-8'))
+                        # creating dictionary for the process
                         for i in range(0, self.IDS_size):
-                            connection.sendall(bytes(str(self.IDS[i]), 'utf-8'))
-                            if connection.recv(1024) != bytes(str(self.IDS[i]), 'utf-8'):
-                                break
-                        connection.sendall(bytes("IPS", 'utf-8'))
-                        for i in range(0, self.IPS_size):
-                            connection.sendall(bytes(str(self.IPS[i]), 'utf-8'))
-                            if connection.recv(1024) != bytes(str(self.IPS[i]), 'utf-8'):
-                                break
-                        connection.sendall(bytes("END", 'utf-8'))
+                            if self.IPS[i] != c_address:
+                                proc_dict = {
+                                    'IP': self.IPS[i],
+                                    'ID': self.IDS[i]
+                                }
+                                json_obj = json.dumps(proc_dict)
+                                connection.sendall(bytes(json_obj, encoding='utf-8'))
+                            connection.sendall(bytes("END", encoding='utf-8'))
+
                     else:
                         print(sys.stderr, 'no more data from', client_address)
                         break
@@ -122,5 +123,6 @@ class TCP_SERVER:
             pika.ConnectionParameters(host=IP))  # Connect to CloudAMQP
         channel = connection.channel()  # start a channel
         channel.queue_declare(queue=str(queue_id))  # naming queue
-        channel.basic_publish(exchange='', routing_key=str(queue_id), body=bytes(str(c_address[0])+'#'+str(self.IDS_size), 'utf-8'))
+        channel.basic_publish(exchange='', routing_key=str(queue_id),
+                              body=bytes(str(c_address[0]) + '#' + str(self.IDS_size), 'utf-8'))
         connection.close()  # closing connection
