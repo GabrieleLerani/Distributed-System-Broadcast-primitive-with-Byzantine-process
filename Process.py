@@ -2,8 +2,11 @@ import pika as pika
 
 import AuthenticatedLink
 import socket
+from threading import Thread
+import time
 
-SERVER_ID = '192.168.1.14'
+SERVER_ID = '192.168.27.119'
+SERVER_PORT = 5000
 
 class Process:
     def __init__(self):
@@ -22,7 +25,7 @@ class Process:
 
     def connectionToServer(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s:
-            self.s.connect((SERVER_ID, 5000))
+            self.s.connect((SERVER_ID, SERVER_PORT))
             mess = bytes("Hello", "utf-8")
             self.s.sendall(mess)
             data = self.s.recv(1024)
@@ -44,6 +47,8 @@ class Process:
                         break
                     self.ips.append(ip)
                     self.sock.sendall(bytes(ip, "utf-8"))
+        t = Thread(target=self.__thread)
+        t.start()
 
     def creationLinks(self):
         hostname = socket.gethostname()
@@ -73,20 +78,25 @@ class Process:
                 if counterReadys > 2 * self.faulty and self.delivered == False:
                     self.delivered = True
                     print("Delivered")
+            time.sleep(0.1)
 
     def __update(self):
-        connection = pika.BlockingConnection(pika.ConnectionParameters(host='192.168.1.14'))
-        channel = connection.channel()
+        with pika.BlockingConnection(pika.ConnectionParameters(host=SERVER_ID)) as connection:
+            channel = connection.channel()
 
-        channel.queue_declare(queue='gia')
+            channel.queue_declare(queue='gia')
 
-        def callback(ch, method, properties, body):
-            print(" [x] Received %r" % body)
+            def callback(ch, method, properties, body):
+                #controllare l'ordine dei messaggi ricevuti
+                for i in body:
+                    self.ids.append(i[0])   #aggiunta id nuovi nella lista
+                    self.ips.append(i[1])   #aggiunta ip nuovi nella lista
+                print(" [x] Received %r" % body)
 
-        channel.basic_consume(queue='gia', on_message_callback=callback, auto_ack=True)
-        channel.start_consuming()
+            channel.basic_consume(queue='gia', on_message_callback=callback, auto_ack=True)
+            channel.start_consuming()
 
-        channel.close()
+            channel.close()
 
     def broadcast(self, message, flag="SEND"):
         self.__update()
