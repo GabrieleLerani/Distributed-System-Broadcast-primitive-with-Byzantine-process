@@ -3,6 +3,9 @@ import sys
 from threading import Thread
 import pika
 
+IP = '192.168.27.119'
+PORT = 5000
+
 
 class TCP_SERVER:
 
@@ -19,7 +22,7 @@ class TCP_SERVER:
         # Create a TCP/IP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Bind the socket to the port
-        server_address = ('192.168.1.14', 5000)
+        server_address = (IP, PORT)
         print(sys.stderr, 'starting up on %s port %s' % server_address)
         sock.bind(server_address)
         # Listen for incoming connections
@@ -45,8 +48,8 @@ class TCP_SERVER:
                         # updating global information
                         if client_address[0] not in self.IPS:
                             self.IDS_size += 1
-                            for id in range(1,self.IDS_size+1):
-                                t = Thread(target=self.thread_trigger, args=(client_address,id))
+                            for p_id in range(1, self.IDS_size + 1):
+                                t = Thread(target=self.thread_trigger, args=(client_address, p_id))
                                 t.start()
                             self.IPS.append(client_address[0])
                             self.IPS_size += 1
@@ -72,7 +75,7 @@ class TCP_SERVER:
         # Create a TCP/IP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Bind the socket to the port
-        server_address = ('192.168.1.14', 5000 + t)
+        server_address = (IP, PORT + t)
         print(sys.stderr, 'starting up on %s port %s' % server_address)
         sock.bind(server_address)
         # Listen for incoming connections
@@ -113,12 +116,11 @@ class TCP_SERVER:
                 # Clean up the connection
                 connection.close()
 
-    def thread_trigger(self, c_address,id):
+    def thread_trigger(self, c_address, queue_id):
         # creating queue
         connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='192.168.1.14'))  # Connect to CloudAMQP
+            pika.ConnectionParameters(host=IP))  # Connect to CloudAMQP
         channel = connection.channel()  # start a channel
-        channel.queue_declare(queue=id)  # naming queue
-        channel.basic_publish(exchange='', routing_key=id, body=bytes(c_address[0], 'utf-8'))
-        channel.basic_publish(exchange='', routing_key=id, body=bytes(str(self.IDS_size), 'utf-8'))
+        channel.queue_declare(queue=str(queue_id))  # naming queue
+        channel.basic_publish(exchange='', routing_key=str(queue_id), body=bytes(str(c_address[0])+'#'+str(self.IDS_size), 'utf-8'))
         connection.close()  # closing connection
