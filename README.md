@@ -21,4 +21,4 @@ Docker RabbitMQ
 
 1)Start the Docker with RabbitMQ
 
-	docker run -d -p 192.168.27.119:5672:5672 -p 15672:15672 rabbitmq:3.8.15-rc.2-management
+	docker run -d -p <ip_address>:5672:5672 -p 15672:15672 rabbitmq:3.8.15-rc.2-management
