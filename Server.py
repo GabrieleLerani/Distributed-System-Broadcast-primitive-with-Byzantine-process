@@ -4,9 +4,6 @@ from threading import Thread
 import pika
 import json
 
-IP = '192.168.27.119'
-PORT = 5000
-
 
 class TCP_SERVER:
 
@@ -18,12 +15,16 @@ class TCP_SERVER:
         self.IPS_size = 0
         self.t = 0
         self.current_IP = None
+        self.IP = None
+        self.PORT = 5000
 
     def do_get(self):
         # Create a TCP/IP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Bind the socket to the port
-        server_address = (IP, PORT)
+        hostname = socket.gethostname()
+        self.IP = socket.gethostbyname('localhost')
+        server_address = (self.IP, self.PORT)
         print(sys.stderr, 'starting up on %s port %s' % server_address)
         sock.bind(server_address)
         # Listen for incoming connections
@@ -76,7 +77,7 @@ class TCP_SERVER:
         # Create a TCP/IP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Bind the socket to the port
-        server_address = (IP, PORT + t)
+        server_address = (self.IP, self.PORT + t)
         print(sys.stderr, 'starting up on %s port %s' % server_address)
         sock.bind(server_address)
         # Listen for incoming connections
@@ -120,7 +121,7 @@ class TCP_SERVER:
     def thread_trigger(self, c_address, queue_id):
         # creating queue
         connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=IP))  # Connect to CloudAMQP
+            pika.ConnectionParameters(host=self.IP))  # Connect to CloudAMQP
         channel = connection.channel()  # start a channel
         channel.queue_declare(queue=str(queue_id))  # naming queue
         channel.basic_publish(exchange='', routing_key=str(queue_id),
