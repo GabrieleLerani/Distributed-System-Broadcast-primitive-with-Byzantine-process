@@ -10,6 +10,7 @@ SERVER_ID = "192.168.1.17"
 SERVER_PORT = 5000
 
 RCV_BUFFER_SIZE = 1024
+JSON_DELIMITER = "\n"
 
 
 class Process:
@@ -46,40 +47,31 @@ class Process:
             mess = bytes("Hello", "utf-8")
             sock.sendall(mess)
             data = json.loads(sock.recv(RCV_BUFFER_SIZE).decode())
+            print("DATA received in connection to server: ", data)
             self.ips.append(data["IP"])
             self.ids.append(data["ID"])
             print(self.ids, self.ips)
 
-            """
-			while 1:
-				# Get from the server a dictionary containing IP and ID
-				# i.e. {"IP": 192.168.1.10,"ID":1}
-				data = sock.recv(RCV_BUFFER_SIZE)
-				parsed_data = json.loads(data.decode())
+            # The server sends the list concatenation of multiple json objects
+            # '{}\n{}\n...{}\n' TODO find another delimiter
+            received_jsons_buffer = ""
+            while 1:
+                data = sock.recv(RCV_BUFFER_SIZE).decode("utf-8")
+                if not data:
+                    break
+                received_jsons_buffer += data
 
-				while 1:
-					self.ids.append(int(parsed_data["ID"]))
-					sock.sendall()
-					# TODO
-				#while 1:
-			"""
+                while JSON_DELIMITER in received_jsons_buffer:
+                    # Split each object inside, -1 indicates to split for each occurrence of the delimiter
+                    # Example: json = '{}\n{}\n{}\nEND' ---> split ---> ['{}','{}','{}','END']
+                    json_list = received_jsons_buffer.split(JSON_DELIMITER, -1)
 
-            """if self.sock.recv(RCV_BUFFER_SIZE).decode("utf-8") == "IDS":
-				while 1:
-					id = self.sock.recv(RCV_BUFFER_SIZE).decode("utf-8")
-					if id == "IPS":
-						break
-					#convertito in int perchè AL utilizza int
-					self.ids.append(int(id))
-					self.sock.sendall(bytes(id, "utf-8"))
-				while 1:
-					ip = self.sock.recv(RCV_BUFFER_SIZE).decode(
-						"utf-8")   #indirizzi ip sono lasciati in string
-					if ip == "END":
-						break
-					self.ips.append(ip)
-					self.sock.sendall(bytes(ip, "utf-8"))
-					"""
+                    if "END" in json_list:
+                        print("do stuff", json_list)
+                        # TODO process with json.loads
+
+                    # TODO append id and ip to lists
+
         t = Thread(target=self.__thread)
         t.start()
 
@@ -145,21 +137,20 @@ class Process:
             response = channel.queue_declare(queue=str(self.selfid))
             # Get the queue length (number of not consumed messages)
             num = response.method.message_count
-            print(num)
             self.counter = 0
 
             def callback(ch, method, properties, body):
                 # check the message ordering
                 # Returns the concatenation of ip and id
-                print(" [x] Received %r" % body)
+                print("[x] Received %r" % body)
                 queue_msg = body.decode("utf-8")
                 temp = queue_msg.split("#")
                 ip_from_queue = temp[0]
                 id_from_queue = temp[1]
                 if ip_from_queue not in self.ips:
-                    self.ips.append(ip_from_queue[0])
-                    self.ids.append(int(id_from_queue[1]))
-                print(self.ips + self.ids)
+                    self.ips.append(ip_from_queue)
+                    self.ids.append(int(id_from_queue))
+                print("List: ", self.ips, self.ids)
                 self.counter += 1
                 if self.counter == num:
                     channel.stop_consuming()
