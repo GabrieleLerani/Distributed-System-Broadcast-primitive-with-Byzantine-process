@@ -4,6 +4,7 @@ import AuthenticatedLink
 import socket
 from threading import Thread
 import time
+import json
 
 SERVER_ID = '192.168.27.119'
 SERVER_PORT = 5000
@@ -34,6 +35,11 @@ class Process:
             self.sock.connect((SERVER_ID, port))
             mess = bytes("Hello", "utf-8")
             self.sock.sendall(mess)
+            data = json.loads(self.sock.recv(1024))
+            print(data)
+            self.ips.append(data.get('IP'))
+            self.ids.append(data.get('ID'))
+        """
             if self.sock.recv(1024).decode("utf-8") == "IDS":
                 while 1:
                     id = self.sock.recv(1024).decode("utf-8")
@@ -47,6 +53,8 @@ class Process:
                         break
                     self.ips.append(ip)
                     self.sock.sendall(bytes(ip, "utf-8"))
+        """
+        print(self.ids + self.ips)
         t = Thread(target=self.__thread)
         t.start()
 
@@ -64,9 +72,10 @@ class Process:
             for msg in self.currentMSG:
                 counterEchos = 0
                 counterReadys = 0
-                for i in range(len(self.ids)):
+                for i in range(len(self.echos)):
                     if self.echos[i] == msg:
                         counterEchos += 1
+                for i in range(len(self.readys)):
                     if self.readys[i] == msg:
                         counterReadys += 1
                 if (counterEchos > (len(self.ids) + self.faulty) / 2) and self.sentready == False:
@@ -84,25 +93,34 @@ class Process:
         with pika.BlockingConnection(pika.ConnectionParameters(host=SERVER_ID)) as connection:
             channel = connection.channel()
 
-            channel.queue_declare(queue='gia')
+            response = channel.queue_declare(queue=str(self.selfid))
+            num = response.method.message_count
+            print(num)
+            self.counter = 0
 
             def callback(ch, method, properties, body):
                 #controllare l'ordine dei messaggi ricevuti
-                for i in body:
-                    self.ids.append(i[0])   #aggiunta id nuovi nella lista
-                    self.ips.append(i[1])   #aggiunta ip nuovi nella lista
                 print(" [x] Received %r" % body)
+                queuemess = body.decode("utf-8")
+                ipid = queuemess.split("#")
+                if(ipid[0] not in self.ips):
+                    self.ips.append(ipid[0])
+                    self.ids.append(int(ipid[1]))
+                print(self.ips + self.ids)
+                self.counter += 1
+                if self.counter == num:
+                    channel.stop_consuming()
+                    channel.close()
 
-            channel.basic_consume(queue='gia', on_message_callback=callback, auto_ack=True)
+            channel.basic_consume(queue=str(self.selfid), on_message_callback=callback, auto_ack=True)
             channel.start_consuming()
-
-            channel.close()
 
     def broadcast(self, message, flag="SEND"):
         self.__update()
+        print("CIAO")
         for i in range(len(self.ids)):
             self.currentMSG = message
-            self.AL[i].send(flag, message)
+            self.AL[i].send(flag + message)
 
     def deliverSend(self, message, id):
         if message[0][:4] == "SEND" and id == 1 and self.sentecho == False:   #lista message contenente lista SEND,message + stringa HMAC
