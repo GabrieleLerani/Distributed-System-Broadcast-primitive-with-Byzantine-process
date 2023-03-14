@@ -51,22 +51,23 @@ class AuthenticatedLink:
                     print("data:", parsed_data)
                     if "MSG" not in parsed_data.keys():
                         self.__add_key(parsed_data)
+                        conn.sendall(b"synACK")
                     else:
-                        self.__deliver(data, id)
+                        self.__deliver(parsed_data)
 
     def __add_key(self, key_dict):
-        self.key[self.id] = key_dict["KEY"].encode('latin1')
+        self.key[self.id] = key_dict["KEY"].encode("latin1")
         print("Key added: {dict}".format(dict=self.key))
 
     def __check(self, id):
         if id not in self.key:
             self.key[id] = ChaCha20Poly1305.generate_key()
             print("That's the key:", self.key.get(self.id, "Key not found123"))
-            key_to_send = {"KEY":self.key[id].decode('latin1')}
+            key_to_send = {"KEY":self.key[id].decode("latin1")}
             print("This is what I am sending: {dict}".format(dict=key_to_send))
             data = json.dumps(key_to_send)
             self.sock.sendall(data.encode())
-            self.temp = self.sock.recv(RCV_BUFFER_SIZE, 0)
+            self.temp = self.sock.recv(RCV_BUFFER_SIZE, 0).decode()
             if self.temp != "synACK":  # Ack used for synchronization with other process
                 return 1
 
@@ -80,7 +81,7 @@ class AuthenticatedLink:
         mess = {
             "MSG": message,
             "HMAC": hmac.new(
-                self.key.get(self.id, "Key not found"), flag + message, hashlib.sha256
+                self.key.get(self.id, "Key not found"), (flag + message).encode("utf-8"), hashlib.sha256
             ).hexdigest(),
             "FLAG": flag,
         }
@@ -107,18 +108,19 @@ class AuthenticatedLink:
             mess = self.__auth(message, flag)
             parsed_data = json.dumps(mess)
             self.sock.sendall(bytes(parsed_data, encoding="utf-8"))
+            print("{dict} sent".format(dict=mess))
 
     # It checks message authenticity comparing the hmac
-    def __check_auth(self, message, hmac, flag, id):
-        temp_hash = hmac.new(self.key[id], flag + message, hashlib.sha256).hexdigest()
-        return temp_hash == hmac
+    def __check_auth(self, message, attached_mac, flag):
+        temp_hash = hmac.new(self.key.get(self.id, "Key not found"), (flag + message).encode("utf-8"), hashlib.sha256).hexdigest()
+        return temp_hash == attached_mac
 
-    def __deliver(self, message, id):
+    def __deliver(self, message):
         msg = message["MSG"]
-        hmac = message["HMAC"]
+        attached_mac = message["HMAC"]
         flag = message["FLAG"]
 
-        self.__check_auth(message, hmac, flag, id)
+        self.__check_auth(msg, attached_mac, flag)
 
         if flag == "SEND":
             self.proc.deliverSend(msg, flag, self.id)
