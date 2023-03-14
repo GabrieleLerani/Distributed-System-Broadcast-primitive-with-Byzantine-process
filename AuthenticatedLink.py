@@ -120,7 +120,7 @@ class AuthenticatedLink:
         attached_mac = message["HMAC"]
         flag = message["FLAG"]
 
-        self.__check_auth(msg, attached_mac, flag)
+        self.__check_auth(msg, attached_mac, flag) # TODO If HMAC is incorrect, abort
 
         if flag == "SEND":
             self.proc.deliverSend(msg, flag, self.id)
