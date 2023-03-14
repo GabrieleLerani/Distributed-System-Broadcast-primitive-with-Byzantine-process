@@ -2,6 +2,7 @@ import socket
 import hashlib
 import hmac
 import json
+import sys
 from threading import Thread
 
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
@@ -48,7 +49,7 @@ class AuthenticatedLink:
                     if not data:
                         break
                     parsed_data = json.loads(data.decode())
-                    print("Received data:", parsed_data)
+                    print(sys.stderr, self.ip + self.id + "sent this data:", parsed_data)
                     if "MSG" not in parsed_data.keys():
                         self.__add_key(parsed_data)
                         conn.sendall(b"synACK")
@@ -57,14 +58,13 @@ class AuthenticatedLink:
 
     def __add_key(self, key_dict):
         self.key[self.id] = key_dict["KEY"].encode("latin1")
-        print("Key added: {dict}".format(dict=self.key))
+        print(sys.stderr, self.ip + self.id + "is the one with this key: {dict}".format(dict=self.key))
 
     def __check(self, id):
         if id not in self.key:
             self.key[id] = ChaCha20Poly1305.generate_key()
-            print("That's the key:", self.key.get(self.id, "Key not found123"))
             key_to_send = {"KEY":self.key[id].decode("latin1")}
-            print("This is what I am sending: {dict}".format(dict=key_to_send))
+            print(sys.stderr, "This is what I am sending: {dict}".format(dict=key_to_send))
             data = json.dumps(key_to_send)
             self.sock.sendall(data.encode())
             self.temp = self.sock.recv(RCV_BUFFER_SIZE, 0).decode()
@@ -77,7 +77,6 @@ class AuthenticatedLink:
     # Example: flag = "SEND" , message = "Hello" ----> HMAC("SENDHello")
     def __auth(self, message, flag):
         self.__check(self.id)
-        print(self.key.get(self.id, "Key not found2"))
         mess = {
             "MSG": message,
             "HMAC": hmac.new(
@@ -86,7 +85,7 @@ class AuthenticatedLink:
             "FLAG": flag,
         }
 
-        print("Key generated")
+        print(sys.stderr, "Key generated")
         return mess
 
     # The send open a new socket, the port is the concatenation of 50/5- id of sending process - id of receiving process
@@ -99,7 +98,7 @@ class AuthenticatedLink:
             else int("5" + str(self.self_id) + str(self.id))
         )
 
-        print("Port used to connect: " + str(port) + " and ip address connected: " + self.ip)
+        print(sys.stderr, "Port used to connect: " + str(port) + " to " + self.ip + self.id)
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
             self.sock.connect((self.ip, port))
@@ -108,7 +107,7 @@ class AuthenticatedLink:
             mess = self.__auth(message, flag)
             parsed_data = json.dumps(mess)
             self.sock.sendall(bytes(parsed_data, encoding="utf-8"))
-            print("{dict} sent".format(dict=mess))
+            print(sys.stderr, "{dict} sent to ".format(dict=mess) + self.ip + self.id)
 
     # It checks message authenticity comparing the hmac
     def __check_auth(self, message, attached_mac, flag):
