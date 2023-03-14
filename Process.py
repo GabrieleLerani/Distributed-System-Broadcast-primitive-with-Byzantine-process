@@ -1,5 +1,5 @@
 import pika as pika
-
+import sys
 import AuthenticatedLink
 import socket
 from threading import Thread
@@ -12,6 +12,7 @@ SERVER_PORT = 5000
 
 RCV_BUFFER_SIZE = 1024
 BREAK_TIME = 0.1
+
 
 class Process:
     def __init__(self):
@@ -50,9 +51,9 @@ class Process:
                     break
 
                 # unpack the length prefix into an integer
-                msg_len = struct.unpack('!I', len_prefix)[0]
+                msg_len = struct.unpack("!I", len_prefix)[0]
                 # receive the JSON object data
-                json_data = b''
+                json_data = b""
                 while len(json_data) < msg_len:
                     packet = sock.recv(msg_len - len(json_data))
                     if not packet:
@@ -60,7 +61,7 @@ class Process:
                     json_data += packet
 
                 # parse the JSON object
-                obj = json.loads(json_data.decode('utf-8'))
+                obj = json.loads(json_data.decode("utf-8"))
 
                 # Add IP and ID to list
                 if isinstance(obj, dict):
@@ -70,16 +71,16 @@ class Process:
                 else:
                     break
 
-        print(self.ids, self.ips)
+        print(sys.stderr, "This is the list of id and ip", self.ids, self.ips)
         t = Thread(target=self.__thread)
         t.start()
 
     def creationLinks(self):
-        hostname = socket.gethostname()
-        IPAddr = socket.gethostbyname(hostname)
-        self.selfip = IPAddr
+        # hostname = socket.gethostname()
+        # IPAddr = socket.gethostbyname(hostname)
+        # self.selfip = IPAddr
 
-        # self.selfip = "192.168.1.17" TODO remove
+        self.selfip = "192.168.1.32"  # TODO remove
 
         self.selfid = self.ids[self.ips.index(self.selfip)]
         for i in range(0, len(self.ids)):
@@ -102,7 +103,7 @@ class Process:
                     if i == msg:
                         counter_readys += 1
                 if (
-                        counter_echos > (len(self.ids) + self.faulty) / 2
+                    counter_echos > (len(self.ids) + self.faulty) / 2
                 ) and self.sentready == False:
                     self.sentready = True
 
@@ -121,7 +122,12 @@ class Process:
 
                 if counter_readys > 2 * self.faulty and self.delivered is False:
                     self.delivered = True
-                    print("Delivered:", msg)
+                    print(
+                        sys.stderr,
+                        "PROCESS:{id},{ip}".format(id=self.id, ip=self.ip),
+                        "Delivered:",
+                        msg,
+                    )
 
             # Not to destroy performance
             time.sleep(BREAK_TIME)
@@ -130,16 +136,20 @@ class Process:
     # the other processes from its queue
     def __update(self):
         with pika.BlockingConnection(
-                pika.ConnectionParameters(host=SERVER_ID)
+            pika.ConnectionParameters(host=SERVER_ID)
         ) as connection:
             channel = connection.channel()
 
             response = channel.queue_declare(queue=str(self.selfid))
             # Get the queue length (number of not consumed messages)
             num = response.method.message_count
-            print("This is the queue length: " + str(num))
+            print(
+                sys.stderr,
+                "PROCESS:{id},{ip}".format(id=self.id, ip=self.ip),
+                "My queue length:",
+                num,
+            )
             if num == 0:
-                print("Num is 0 so the update is closing...")
                 channel.close()
                 return
 
@@ -188,8 +198,12 @@ class Process:
             if msg not in self.currentMSG:
                 self.currentMSG.append(msg)
             self.sentecho = True
-            print("Starting the ECHO part...")
-            self.__update() # If writer_id == 1 then it is correct, otherwise no
+            print(
+                sys.stderr,
+                "PROCESS:{id},{ip}".format(id=self.id, ip=self.ip),
+                "Starting the ECHO part...",
+            )
+            self.__update()  # If writer_id == 1 then it is correct, otherwise no
             for i in range(len(self.ids)):
                 self.AL[i].send(msg, flag="ECHO")
 
