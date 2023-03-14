@@ -24,8 +24,8 @@ class Process:
         self.sentecho = False
         self.sentready = False
         self.delivered = False
-        self.echos = []
-        self.readys = []
+        self.echos = {}
+        self.readys = {}
         self.faulty = len(self.ids) / 3
 
     def connectionToServer(self):
@@ -95,11 +95,11 @@ class Process:
             for msg in self.currentMSG:
                 counter_echos = 0
                 counter_readys = 0
-                for i in range(len(self.echos)):
-                    if self.echos[i] == msg:
+                for i in self.echos.values():
+                    if i == msg:
                         counter_echos += 1
-                for i in range(len(self.readys)):
-                    if self.readys[i] == msg:
+                for i in self.readys.values():
+                    if i == msg:
                         counter_readys += 1
                 if (
                         counter_echos > (len(self.ids) + self.faulty) / 2
@@ -170,14 +170,15 @@ class Process:
     # the type (SEND,ECHO,READY)
     def broadcast(self, message):
         self.__update()
+        for j in range(len(self.AL), len(self.ids)):
+            self.AL.append(
+                AuthenticatedLink.AuthenticatedLink(
+                    self.selfid, self.selfip, self.ids[j], self.ips[j], self
+                )
+            )
+            self.AL[j].receiver()
         for i in range(len(self.ids)):
             self.currentMSG = message
-            for j in range(len(self.ids) - len(self.AL), len(self.ids)):
-                self.AL.append(
-                    AuthenticatedLink.AuthenticatedLink(
-                        self.selfid, self.selfip, self.ids[j], self.ips[j], self
-                    )
-                )
             self.AL[i].send(message, flag="SEND")
 
     def deliverSend(self, msg, flag, id):
@@ -188,21 +189,16 @@ class Process:
                 self.currentMSG.append(msg)
             self.sentecho = True
             print("Starting the ECHO part...")
+            self.__update() # If writer_id == 1 then it is correct, otherwise no
             for i in range(len(self.ids)):
-                self.AL[i].send(msg, "ECHO")
+                self.AL[i].send(msg, flag="ECHO")
 
     def deliverEcho(self, msg, flag, id):
-        if flag == "ECHO":
-            if self.echos[id] is None:
-                # Add the message if it's not yet received
-                if msg not in self.currentMSG:
-                    self.currentMSG.append(msg)
-                    self.echos[id] = msg
+        if flag == "ECHO" and id in self.echos and msg not in self.currentMSG:
+            self.currentMSG.append(msg)
+            self.echos[id] = msg
 
     def deliverReady(self, msg, flag, id):
-        if flag == "READY":
-            if self.readys[id] is None:
-                # Add the message if it's not yet received
-                if msg not in self.currentMSG:
-                    self.currentMSG.append(msg)
-                    self.readys[id] = msg
+        if flag == "READY" and id in self.readys and msg not in self.currentMSG:
+            self.currentMSG.append(msg)
+            self.readys[id] = msg

@@ -48,7 +48,7 @@ class AuthenticatedLink:
                     if not data:
                         break
                     parsed_data = json.loads(data.decode())
-                    print("data:", parsed_data)
+                    print("Received data:", parsed_data)
                     if "MSG" not in parsed_data.keys():
                         self.__add_key(parsed_data)
                         conn.sendall(b"synACK")
@@ -99,7 +99,7 @@ class AuthenticatedLink:
             else int("5" + str(self.self_id) + str(self.id))
         )
 
-        print("Port used to connect: " + str(port))
+        print("Port used to connect: " + str(port) + " and ip address connected: " + self.ip)
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
             self.sock.connect((self.ip, port))
