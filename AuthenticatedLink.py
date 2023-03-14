@@ -34,6 +34,9 @@ class AuthenticatedLink:
             if self.self_id < 10 and self.id < 10
             else int("5" + str(self.id) + str(self.self_id))
         )
+
+        print("Port used for receiving: " + str(port))
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s:
             self.s.bind((host, port))
             self.s.listen(0)
@@ -45,22 +48,25 @@ class AuthenticatedLink:
                     if not data:
                         break
                     parsed_data = json.loads(data.decode())
+                    print("data:", parsed_data)
                     if "MSG" not in parsed_data.keys():
                         self.__add_key(parsed_data)
-                    print("data:", parsed_data)
-                    self.__deliver(data, id)
+                    else:
+                        self.__deliver(data, id)
 
     def __add_key(self, key_dict):
-        self.key[self.id] = key_dict["KEY"]
+        self.key[self.id] = key_dict["KEY"].encode('latin1')
+        print("Key added: {dict}".format(dict=self.key))
 
     def __check(self, id):
         if id not in self.key:
             self.key[id] = ChaCha20Poly1305.generate_key()
             print("That's the key:", self.key.get(self.id, "Key not found123"))
-            key_to_send = {"KEY":self.key[id]}
+            key_to_send = {"KEY":self.key[id].decode('latin1')}
+            print("This is what I am sending: {dict}".format(dict=key_to_send))
             data = json.dumps(key_to_send)
-            self.s.sendall(bytes(data, "utf-8"))
-            self.temp = self.s.recv(RCV_BUFFER_SIZE, 0)
+            self.sock.sendall(data.encode())
+            self.temp = self.sock.recv(RCV_BUFFER_SIZE, 0)
             if self.temp != "synACK":  # Ack used for synchronization with other process
                 return 1
 
@@ -92,14 +98,15 @@ class AuthenticatedLink:
             else int("5" + str(self.self_id) + str(self.id))
         )
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s:
-            self.s.connect((self.ip, port))
+        print("Port used to connect: " + str(port))
 
-        # Mess is a dictionary
-        mess = self.__auth(message, flag)
-        parsed_data = json.dumps(mess)
-        self.s.sendall(bytes(parsed_data, encoding="utf-8"))
-        self.s.close()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
+            self.sock.connect((self.ip, port))
+
+            # Mess is a dictionary
+            mess = self.__auth(message, flag)
+            parsed_data = json.dumps(mess)
+            self.sock.sendall(bytes(parsed_data, encoding="utf-8"))
 
     # It checks message authenticity comparing the hmac
     def __check_auth(self, message, hmac, flag, id):
