@@ -1,7 +1,6 @@
 import math
 
 import pika as pika
-import sys
 import AuthenticatedLink
 import socket
 from threading import Thread
@@ -32,7 +31,7 @@ class Process:
         self.readys = {}
         self.faulty = math.floor(len(self.ids) / 3)
 
-    def connectionToServer(self):
+    def connection_to_server(self):
         # It starts a connection to the server to obtain a port number
         print("-----CONNECTING TO SERVER...-----")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -40,7 +39,7 @@ class Process:
             mess = bytes("Hello", "utf-8")
             s.sendall(mess)
             data = s.recv(RCV_BUFFER_SIZE).decode()
-            #print(sys.stderr, "This is the port given by the server: " + data)
+            # print(sys.stderr, "This is the port given by the server: " + data)
             logging.debug("PROCESS:This is the port given by the server: " + data)
         port = 5000 + int(data)
         print("-----CONNECTION TO SERVER SUCCESSFULLY CREATED-----")
@@ -74,8 +73,8 @@ class Process:
                 # END is str so isinstance of obj returns false
                 else:
                     break
-        
-        #print(sys.stderr, "This is the list of id and ip", self.ids, self.ips)
+
+        # print(sys.stderr, "This is the list of id and ip", self.ids, self.ips)
         logging.debug("PROCESS:This is the list of id and ip", self.ids, self.ips)
         logging.info("PROCESS:Starting thread on function thread")
         print("-----GATHERED ALL THE PEERS IPS FROM THE BOOTSTRAP SERVER-----")
@@ -83,7 +82,7 @@ class Process:
         t = Thread(target=self.__thread)
         t.start()
 
-    def creationLinks(self):
+    def creation_links(self):
         # hostname = socket.gethostname()
         # IPAddr = socket.gethostbyname(hostname)
 
@@ -101,12 +100,12 @@ class Process:
             self.AL[i].receiver()
 
     def __thread(self):
-        #print(sys.stderr, "Number of faulty processes is :" + str(self.faulty))
+        # print(sys.stderr, "Number of faulty processes is :" + str(self.faulty))
         logging.debug("PROCESS:Number of faulty processes is :" + str(self.faulty))
         while True:
             for msg in self.currentMSG:
-                #print("MSG: ", msg)
-                logging.debug("PROCESS:Msg in currentMSG:",msg)
+                # print("MSG: ", msg)
+                logging.debug("PROCESS:Msg in currentMSG:", msg)
                 counter_echos = 0
                 counter_readys = 0
 
@@ -116,22 +115,23 @@ class Process:
                 for i in self.readys.values():
                     if i == msg:
                         counter_readys += 1
-               # print(
-               #    "counter echos:",
-               #    counter_echos,
-               #     "N+f/2=",
-               #    (len(self.ids) + self.faulty) / 2,
-               #    "ECHOS: ",
-               #    self.echos.values(),
-               # )
-                logging.debug("PROCESS:Counter echos:",counter_echos,"N+f/2=",(len(self.ids) + self.faulty) / 2,"ECHOS: ",self.echos.values(),)
+                # print(
+                #    "counter echos:",
+                #    counter_echos,
+                #     "N+f/2=",
+                #    (len(self.ids) + self.faulty) / 2,
+                #    "ECHOS: ",
+                #    self.echos.values(),
+                # )
+                logging.debug("PROCESS:Counter echos:", counter_echos, "N+f/2=", (len(self.ids) + self.faulty) / 2,
+                              "ECHOS: ", self.echos.values(), )
 
                 if (
-                    counter_echos > (len(self.ids) + self.faulty) / 2
-                ) and self.sentready == False:
+                        counter_echos > (len(self.ids) + self.faulty) / 2
+                ) and self.sentready is False:
                     self.sentready = True
 
-                    #print("------ Starting ready part ------ ")
+                    # print("------ Starting ready part ------ ")
                     logging.info("PROCESS:------ Starting ready part ------ ")
                     # Broadcast to all a ready message
                     for i in range(len(self.ids)):
@@ -148,14 +148,14 @@ class Process:
 
                 if counter_readys > 2 * self.faulty and self.delivered is False:
                     self.delivered = True
-                    #print(
-                     #   sys.stderr,
-                      #  "PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip),
-                       # "Delivered:",
-                        #msg,
-                    #)
-                    logging.debug("PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip), "Delivered:",msg,)
-                    print("-----MESSAGE DELIVERED:-----",msg)
+                    # print(
+                    #   sys.stderr,
+                    #  "PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip),
+                    # "Delivered:",
+                    # msg,
+                    # )
+                    logging.debug("PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip), "Delivered:", msg, )
+                    print("-----MESSAGE DELIVERED:-----", msg)
 
             # Not to destroy performance
             time.sleep(BREAK_TIME)
@@ -164,30 +164,30 @@ class Process:
     # the other processes from its queue
     def __update(self):
         with pika.BlockingConnection(
-            pika.ConnectionParameters(host=SERVER_ID)
+                pika.ConnectionParameters(host=SERVER_ID)
         ) as connection:
             channel = connection.channel()
 
             response = channel.queue_declare(queue=str(self.selfid))
             # Get the queue length (number of not consumed messages)
             num = response.method.message_count
-           # print(
-           #    sys.stderr,
-           #   "PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip),
-           #  "My queue length:",
-           # num,
-           #)
-            logging.debug("PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip),"My queue length:",num,)
+            # print(
+            #    sys.stderr,
+            #   "PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip),
+            #  "My queue length:",
+            # num,
+            # )
+            logging.debug("PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip), "My queue length:", num, )
             if num == 0:
                 channel.close()
                 return
 
             self.counter = 0
 
-            def callback(ch, method, properties, body):
+            def callback(body):
                 # check the message ordering
                 # Returns the concatenation of ip and id
-                #print(sys.stderr, " [x] Received %r" % body)
+                # print(sys.stderr, " [x] Received %r" % body)
                 logging.debug("PROCESS: [x] Received %r" % body)
                 queue_msg = body.decode("utf-8")
                 temp = queue_msg.split("#")
@@ -221,50 +221,50 @@ class Process:
             self.currentMSG.append(message)
             self.AL[i].send(message, flag="SEND")
 
-    def deliverSend(self, msg, flag, id):
+    def deliver_send(self, msg, flag, idn):
         # id == 1 checks that the delivery is computed with the sender s that by convention it's the first
-        if flag == "SEND" and id == 1 and self.sentecho == False:
+        if flag == "SEND" and idn == 1 and self.sentecho is False:
             # Add the message if it's not yet received
             if msg not in self.currentMSG:
                 self.currentMSG.append(msg)
             self.sentecho = True
-            #print(
+            # print(
             #   sys.stderr,
             #  "PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip),
             # "Starting the ECHO part...",
-            #)
-            logging.debug("PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip),"Starting the ECHO part...",)
+            # )
+            logging.debug("PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip), "Starting the ECHO part...", )
             self.__update()  # If writer_id == 1 then it is correct, otherwise no
             for i in range(len(self.ids)):
                 self.AL[i].send(msg, flag="ECHO")
 
-    def deliverEcho(self, msg, flag, id):
-        #print("msg,", msg, "flag", flag, "id", id)
-        #print("CURRENTMSG", self.currentMSG)
-        logging.debug("PROCESS:Msg,", msg, "flag", flag, "id", id)
+    def deliver_echo(self, msg, flag, idn):
+        # print("msg,", msg, "flag", flag, "id", id)
+        # print("CURRENTMSG", self.currentMSG)
+        logging.debug("PROCESS:Msg,", msg, "flag", flag, "id", idn)
         logging.debug("PROCESS:CURRENTMSG", self.currentMSG)
-        if flag == "ECHO" and id not in self.echos:
+        if flag == "ECHO" and idn not in self.echos:
             if msg not in self.currentMSG:
                 self.currentMSG.append(msg)
-            self.echos[id] = msg
-            #print(
+            self.echos[idn] = msg
+            # print(
             #   sys.stderr,
             #  "--------The dicts are {echos}:".format(echos=self.echos) + "-------\n",
-            #)
-            logging.debug("PROCESS: --------The dicts are {echos}:".format(echos=self.echos) + "-------\n",)
+            # )
+            logging.debug("PROCESS: --------The dicts are {echos}:".format(echos=self.echos) + "-------\n", )
 
-    def deliverReady(self, msg, flag, id):
-        #print("msg,", msg, "flag", flag, "id", id)
-        #print("CURRENTMSG", self.currentMSG)
-        logging.debug("PROCESS:Msg,", msg, "flag", flag, "id", id)
+    def deliver_ready(self, msg, flag, idn):
+        # print("msg,", msg, "flag", flag, "id", id)
+        # print("CURRENTMSG", self.currentMSG)
+        logging.debug("PROCESS:Msg,", msg, "flag", flag, "id", idn)
         logging.debug("PROCESS:CURRENTMSG", self.currentMSG)
-        if flag == "READY" and id not in self.readys:
+        if flag == "READY" and idn not in self.readys:
             if msg not in self.currentMSG:
                 self.currentMSG.append(msg)
-            self.readys[id] = msg
-            #print(
+            self.readys[idn] = msg
+            # print(
             #   sys.stderr,
             #  "--------The dicts are {readys}:".format(readys=self.readys)
             # + "-------\n",
-            #)
-            logging.debug("PROCESS: --------The dicts are {readys}:".format(echos=self.readys) + "-------\n",)
+            # )
+            logging.debug("PROCESS: --------The dicts are {readys}:".format(readys=self.readys) + "-------\n", )

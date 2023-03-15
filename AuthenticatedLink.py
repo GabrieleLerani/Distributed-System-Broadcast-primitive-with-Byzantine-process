@@ -2,7 +2,6 @@ import socket
 import hashlib
 import hmac
 import json
-import sys
 import time
 import logging
 from threading import Thread
@@ -14,16 +13,16 @@ KEY_SIZE = 32
 
 
 class AuthenticatedLink:
-    def __init__(self, self_id, self_ip, id, ip, proc):
+    def __init__(self, self_id, self_ip, idn, ip, proc):
         self.proc = proc
         self.self_id = self_id  # id of sending process
-        self.id = id  # id of receiving process
+        self.id = idn  # id of receiving process
         self.self_ip = self_ip
         self.ip = ip
         self.key = {}
 
     def receiver(self):
-        #print("Start thread to receive messages...")
+        # print("Start thread to receive messages...")
         logging.info("AUTH:Start thread to receive messages...")
         t = Thread(target=self.__receive)
         t.start()
@@ -39,7 +38,7 @@ class AuthenticatedLink:
             else int("5" + str(self.id) + str(self.self_id))
         )
 
-        #print("Port used for receiving: " + str(port))
+        # print("Port used for receiving: " + str(port))
         logging.debug("AUTH:Port used for receiving: " + str(port))
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s:
@@ -49,7 +48,7 @@ class AuthenticatedLink:
             conn, addr = self.s.accept()
 
             with conn:
-                #print("Connected by", addr)
+                # print("Connected by", addr)
                 logging.debug("AUTH:Connected by", addr)
                 while True:
                     data = conn.recv(RCV_BUFFER_SIZE)
@@ -58,7 +57,7 @@ class AuthenticatedLink:
                         break
 
                     parsed_data = json.loads(data.decode())
-                    #print(sys.stderr, self.ip, self.id, "sent this data:", parsed_data)
+                    # print(sys.stderr, self.ip, self.id, "sent this data:", parsed_data)
                     logging.debug("AUTH:", self.ip, self.id, "sent this data:", parsed_data)
                     if "MSG" not in parsed_data.keys():
                         self.__add_key(parsed_data)
@@ -68,13 +67,13 @@ class AuthenticatedLink:
                         t.start()
 
                         # self.__deliver(parsed_data)
-                #print("------ DATA", data)
-                logging.debug("AUTH:Received DATA:",data)
-            #print(
+                # print("------ DATA", data)
+                logging.debug("AUTH:Received DATA:", data)
+            # print(
             #    "------- SOCKET CLOSED, ME:{self_ip},TO:{ip}".format(
             #        self_ip=self.self_ip, ip=self.ip
             #    )
-            #)
+            # )
             logging.debug(
                 "AUTH:------- SOCKET CLOSED, ME:{self_ip},TO:{ip}".format(
                     self_ip=self.self_ip, ip=self.ip
@@ -83,25 +82,25 @@ class AuthenticatedLink:
 
     def __add_key(self, key_dict):
         self.key[self.id] = key_dict["KEY"].encode("latin1")
-        #print(
+        # print(
         #    sys.stderr,
         #    self.ip,
         #   self.id,
         #   "is the one with this key: {dict}".format(dict=self.key),
-        #)
+        # )
         logging.debug("AUTH:",
-            self.ip,
-            self.id,
-            "is the one with this key: {dict}".format(dict=self.key),
-        )
+                      self.ip,
+                      self.id,
+                      "is the one with this key: {dict}".format(dict=self.key),
+                      )
 
-    def __check(self, id):
-        if id not in self.key:
-            self.key[id] = ChaCha20Poly1305.generate_key()
-            key_to_send = {"KEY": self.key[id].decode("latin1")}
-            #print(
+    def __check(self, idn):
+        if idn not in self.key:
+            self.key[idn] = ChaCha20Poly1305.generate_key()
+            key_to_send = {"KEY": self.key[idn].decode("latin1")}
+            # print(
             #    sys.stderr, "This is what I am sending: {dict}".format(dict=key_to_send)
-            #)
+            # )
             logging.debug(
                 "AUTH:This is what I am sending: {dict}".format(dict=key_to_send)
             )
@@ -128,7 +127,7 @@ class AuthenticatedLink:
             "FLAG": flag,
         }
 
-        #print(sys.stderr, "Key generated")
+        # print(sys.stderr, "Key generated")
         logging.info("AUTH:Key generated")
         return mess
 
@@ -142,7 +141,7 @@ class AuthenticatedLink:
             else int("5" + str(self.self_id) + str(self.id))
         )
 
-        #print(sys.stderr, "Port used to connect: ", str(port), "to", self.ip, self.id)
+        # print(sys.stderr, "Port used to connect: ", str(port), "to", self.ip, self.id)
         logging.debug("AUTH:Port used to connect: ", str(port), "to", self.ip, self.id)
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
@@ -153,7 +152,7 @@ class AuthenticatedLink:
             parsed_data = json.dumps(mess)
             self.sock.sendall(bytes(parsed_data, encoding="utf-8"))
 
-            #print(sys.stderr, "{dict} sent to ".format(dict=mess), self.ip, self.id)
+            # print(sys.stderr, "{dict} sent to ".format(dict=mess), self.ip, self.id)
             logging.debug("AUTH:{dict} sent to ".format(dict=mess), self.ip, self.id)
 
     # It checks message authenticity comparing the hmac
@@ -177,6 +176,6 @@ class AuthenticatedLink:
         if flag == "SEND":
             self.proc.deliverSend(msg, flag, self.id)
         elif flag == "ECHO":
-            self.proc.deliverEcho(msg, flag, self.id)
+            self.proc.deliver_echo(msg, flag, self.id)
         elif flag == "READY":
-            self.proc.deliverReady(msg, flag, self.id)
+            self.proc.deliver_ready(msg, flag, self.id)
