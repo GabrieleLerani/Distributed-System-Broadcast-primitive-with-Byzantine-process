@@ -1,8 +1,8 @@
 import sys
 from threading import Thread
-
+import logging
 import Server
-import process
+import Process
 
 
 def thread1():
@@ -11,9 +11,14 @@ def thread1():
 
 
 if __name__ == "__main__":
+    
+    logging.basicConfig(filename='debug.log', filemode='w',encoding='utf-8', level=logging.DEBUG)
     t = Thread(target=thread1,)
     t.start()
-    print(sys.stderr,'f')
-    process=process.process()
+    logging.info('MAIN:STARTING PROTOCOL--> BYZANTINE RELIABLE BROADCAST')
+    process=Process.process()
     process.start()
+    logging.info('MAIN:ENDING PROTOCOL--> BYZANTINE RELIABLE BROADCAST')
+    logging.info('MAIN:SUCCESSFUL EXIT')
+    exit(0)
 
