@@ -38,7 +38,7 @@ class Process:
             mess = bytes("Hello", "utf-8")
             s.sendall(mess)
             data = s.recv(RCV_BUFFER_SIZE).decode()
-            print(sys.stderr,"This is the port given by the server: " + data)
+            print(sys.stderr, "This is the port given by the server: " + data)
 
         port = 5000 + int(data)
 
@@ -78,11 +78,12 @@ class Process:
         t.start()
 
     def creationLinks(self):
-        hostname = socket.gethostname()
-        IPAddr = socket.gethostbyname(hostname)
-        self.selfip = IPAddr
+        # hostname = socket.gethostname()
+        # IPAddr = socket.gethostbyname(hostname)
 
-        # self.selfip = "192.168.1.32"  # TODO remove
+        # self.selfip = IPAddr
+
+        self.selfip = "192.168.1.32"  # TODO remove
 
         self.selfid = self.ids[self.ips.index(self.selfip)]
         for i in range(0, len(self.ids)):
@@ -94,25 +95,38 @@ class Process:
             self.AL[i].receiver()
 
     def __thread(self):
-        print(sys.stderr,"Number of faulty processes is :"+str(self.faulty))
+        print(sys.stderr, "Number of faulty processes is :" + str(self.faulty))
         while True:
             for msg in self.currentMSG:
+                print("MSG: ", msg)
                 counter_echos = 0
                 counter_readys = 0
+
                 for i in self.echos.values():
                     if i == msg:
+                        print("HERE -----")
                         counter_echos += 1
                 for i in self.readys.values():
                     if i == msg:
                         counter_readys += 1
+                print(
+                    "counter echos:",
+                    counter_echos,
+                    "N+f/2=",
+                    (len(self.ids) + self.faulty) / 2,
+                    "ECHOS: ",
+                    self.echos.values(),
+                )
+
                 if (
                     counter_echos > (len(self.ids) + self.faulty) / 2
                 ) and self.sentready == False:
                     self.sentready = True
 
+                    print("------ Starting ready part ------ ")
                     # Broadcast to all a ready message
                     for i in range(len(self.ids)):
-                        self.currentMSG = msg
+                        self.currentMSG.append(msg)
                         self.AL[i].send(msg, flag="READY")
 
                 if counter_readys > self.faulty and self.sentready is False:
@@ -120,7 +134,7 @@ class Process:
 
                     # Broadcast to all a ready message
                     for i in range(len(self.ids)):
-                        self.currentMSG = msg
+                        self.currentMSG.append(msg)
                         self.AL[i].send(msg, flag="READY")
 
                 if counter_readys > 2 * self.faulty and self.delivered is False:
@@ -161,7 +175,7 @@ class Process:
             def callback(ch, method, properties, body):
                 # check the message ordering
                 # Returns the concatenation of ip and id
-                print(sys.stderr," [x] Received %r" % body)
+                print(sys.stderr, " [x] Received %r" % body)
                 queue_msg = body.decode("utf-8")
                 temp = queue_msg.split("#")
                 ip_from_queue = temp[0]
@@ -191,7 +205,7 @@ class Process:
             )
             self.AL[j].receiver()
         for i in range(len(self.ids)):
-            self.currentMSG = message
+            self.currentMSG.append(message)
             self.AL[i].send(message, flag="SEND")
 
     def deliverSend(self, msg, flag, id):
@@ -211,13 +225,16 @@ class Process:
                 self.AL[i].send(msg, flag="ECHO")
 
     def deliverEcho(self, msg, flag, id):
-        print("msg,",msg,"flag",flag,"id",id)
-        print("CURRENTMSG",self.currentMSG)
-        if flag == "ECHO" and id not in self.echos :
+        print("msg,", msg, "flag", flag, "id", id)
+        print("CURRENTMSG", self.currentMSG)
+        if flag == "ECHO" and id not in self.echos:
             if msg not in self.currentMSG:
                 self.currentMSG.append(msg)
             self.echos[id] = msg
-            print(sys.stderr, "--------The dicts are {echos}:".format(echos=self.echos) + '-------\n')
+            print(
+                sys.stderr,
+                "--------The dicts are {echos}:".format(echos=self.echos) + "-------\n",
+            )
 
     def deliverReady(self, msg, flag, id):
         print("msg,", msg, "flag", flag, "id", id)
@@ -226,4 +243,8 @@ class Process:
             if msg not in self.currentMSG:
                 self.currentMSG.append(msg)
             self.readys[id] = msg
-            print(sys.stderr, "--------The dicts are {readys}:".format(readys=self.readys) + '-------\n')
+            print(
+                sys.stderr,
+                "--------The dicts are {readys}:".format(readys=self.readys)
+                + "-------\n",
+            )

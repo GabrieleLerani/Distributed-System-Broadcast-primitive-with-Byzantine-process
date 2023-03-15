@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import sys
+import time
 from threading import Thread
 
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
@@ -39,35 +40,56 @@ class AuthenticatedLink:
         print("Port used for receiving: " + str(port))
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s:
+            self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.s.bind((host, port))
             self.s.listen(0)
             conn, addr = self.s.accept()
+
             with conn:
                 print("Connected by", addr)
                 while True:
                     data = conn.recv(RCV_BUFFER_SIZE)
+
                     if not data:
                         break
+
                     parsed_data = json.loads(data.decode())
-                    print(sys.stderr, self.ip + self.id + "sent this data:", parsed_data)
+                    print(sys.stderr, self.ip, self.id, "sent this data:", parsed_data)
                     if "MSG" not in parsed_data.keys():
                         self.__add_key(parsed_data)
                         conn.sendall(b"synACK")
                     else:
-                        self.__deliver(parsed_data)
+                        t = Thread(target=self.__deliver, args=(parsed_data,))
+                        t.start()
+
+                        # self.__deliver(parsed_data)
+                print("------ DATA", data)
+            print(
+                "------- SOCKET CLOSED, ME:{self_ip},TO:{ip}".format(
+                    self_ip=self.self_ip, ip=self.ip
+                )
+            )
 
     def __add_key(self, key_dict):
         self.key[self.id] = key_dict["KEY"].encode("latin1")
-        print(sys.stderr, self.ip + self.id + "is the one with this key: {dict}".format(dict=self.key))
+        print(
+            sys.stderr,
+            self.ip,
+            self.id,
+            "is the one with this key: {dict}".format(dict=self.key),
+        )
 
     def __check(self, id):
         if id not in self.key:
             self.key[id] = ChaCha20Poly1305.generate_key()
-            key_to_send = {"KEY":self.key[id].decode("latin1")}
-            print(sys.stderr, "This is what I am sending: {dict}".format(dict=key_to_send))
+            key_to_send = {"KEY": self.key[id].decode("latin1")}
+            print(
+                sys.stderr, "This is what I am sending: {dict}".format(dict=key_to_send)
+            )
             data = json.dumps(key_to_send)
             self.sock.sendall(data.encode())
             self.temp = self.sock.recv(RCV_BUFFER_SIZE, 0).decode()
+
             if self.temp != "synACK":  # Ack used for synchronization with other process
                 return 1
 
@@ -80,7 +102,9 @@ class AuthenticatedLink:
         mess = {
             "MSG": message,
             "HMAC": hmac.new(
-                self.key.get(self.id, "Key not found"), (flag + message).encode("utf-8"), hashlib.sha256
+                self.key.get(self.id, "Key not found"),
+                (flag + message).encode("utf-8"),
+                hashlib.sha256,
             ).hexdigest(),
             "FLAG": flag,
         }
@@ -98,7 +122,7 @@ class AuthenticatedLink:
             else int("5" + str(self.self_id) + str(self.id))
         )
 
-        print(sys.stderr, "Port used to connect: " + str(port) + " to " + self.ip + self.id)
+        print(sys.stderr, "Port used to connect: ", str(port), "to", self.ip, self.id)
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
             self.sock.connect((self.ip, port))
@@ -107,11 +131,16 @@ class AuthenticatedLink:
             mess = self.__auth(message, flag)
             parsed_data = json.dumps(mess)
             self.sock.sendall(bytes(parsed_data, encoding="utf-8"))
-            print(sys.stderr, "{dict} sent to ".format(dict=mess) + self.ip + self.id)
+
+            print(sys.stderr, "{dict} sent to ".format(dict=mess), self.ip, self.id)
 
     # It checks message authenticity comparing the hmac
     def __check_auth(self, message, attached_mac, flag):
-        temp_hash = hmac.new(self.key.get(self.id, "Key not found"), (flag + message).encode("utf-8"), hashlib.sha256).hexdigest()
+        temp_hash = hmac.new(
+            self.key.get(self.id, "Key not found"),
+            (flag + message).encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
         return temp_hash == attached_mac
 
     def __deliver(self, message):
@@ -119,8 +148,10 @@ class AuthenticatedLink:
         attached_mac = message["HMAC"]
         flag = message["FLAG"]
 
-        self.__check_auth(msg, attached_mac, flag) # TODO If HMAC is incorrect, abort
+        self.__check_auth(msg, attached_mac, flag)  # TODO If HMAC is incorrect, abort
 
+        time.sleep(0.1)
+        self.receiver()
         if flag == "SEND":
             self.proc.deliverSend(msg, flag, self.id)
         elif flag == "ECHO":
