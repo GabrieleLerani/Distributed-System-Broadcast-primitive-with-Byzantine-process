@@ -25,8 +25,9 @@ class TCP_SERVER:
         # Create a TCP/IP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Bind the socket to the port
-        self.IP = socket.gethostbyname('localhost')
+        # self.IP = socket.gethostbyname('localhost')
 
+        self.IP = '192.168.1.40'
         server_address = (self.IP, self.PORT)
         # print(sys.stderr, ' SERVER: starting up on %s port %s' % server_address)
         logging.info(' SERVER: starting up on %s port %s' % server_address)
@@ -42,8 +43,8 @@ class TCP_SERVER:
             connection, client_address = sock.accept()
 
             with connection:
-                # print(sys.stderr, 'SERVER: connection from', client_address)
-                logging.debug('SERVER: connection from', client_address)
+
+                logging.debug('SERVER: connection from %s', client_address)
 
                 # Receive the data in small chunks and retransmit it
                 while True:
@@ -74,8 +75,7 @@ class TCP_SERVER:
                         connection.sendall(bytes(str(self.t), 'utf-8'))
 
                     else:
-                        # print(sys.stderr, 'SERVER: no more data from', client_address)
-                        logging.debug('SERVER: no more data from', client_address)
+                        logging.debug('SERVER: no more data from %s', client_address)
                         break
 
     def thread_conn(self, t, c_address):
@@ -86,8 +86,7 @@ class TCP_SERVER:
             # Bind the socket to the port
             server_address = (self.IP, self.PORT + t)
 
-            # print(sys.stderr, ' THREAD_CONN: starting up on %s port %s' % server_address)
-            logging.debug(' THREAD_CONN: starting up on %s port %s' % server_address)
+            logging.debug(' THREAD_CONN: starting up on %s port %s', server_address[0],server_address[1])
 
             sock.bind(server_address)
             # Listen for incoming connections
@@ -95,13 +94,12 @@ class TCP_SERVER:
 
             while True:
                 # Wait for a connection from a process
-                # print(sys.stderr, 'THREAD_CONN: waiting for a connection')
+
                 logging.debug('THREAD_CONN: waiting for a connection')
                 connection, client_address = sock.accept()
 
                 with connection:
-                    # print(sys.stderr, 'THREAD_CONN: connection from', client_address)
-                    logging.debug('THREAD_CONN: connection from', client_address)
+                    logging.debug('THREAD_CONN: connection from %s', client_address)
 
                     # Receive the data in small chunks and retransmit it
                     while True:
@@ -109,14 +107,14 @@ class TCP_SERVER:
                         data = connection.recv(RCV_BUFFER_SIZE)
 
                         if data:
-                            # print(sys.stderr, 'THREAD_CONN: received "%s"' % data)
-                            logging.debug('THREAD_CONN: received "%s"' % data)
-                            # print(sys.stderr, 'THREAD_CONN: sending data back to the client')
+
+                            logging.debug('THREAD_CONN: received %s', data)
+
                             logging.debug('THREAD_CONN: sending data back to the client')
                             # sending back to client process the address of the socket's thread
                             # creating dictionary for the process
                             # print("THREAD_CONN: sending dictionaries of ips list:", self.IPS)
-                            logging.debug("THREAD_CONN: sending dictionaries of ips list:", self.IPS)
+                            logging.debug("THREAD_CONN: sending dictionaries of ips list: %s", self.IPS)
 
                             for i in range(self.IDS_size):
                                 if self.IPS[i] != c_address:
@@ -129,18 +127,18 @@ class TCP_SERVER:
 
                             end_message = utils.serialize_json('END')
                             connection.sendall(end_message)
-                            # print("THREAD_CONN: dictionaries of ips list sent successfully")
+
                             logging.info("THREAD_CONN: dictionaries of ips list sent successfully")
 
                         else:
-                            # print(sys.stderr, 'THREAD_CONN: no more data from', client_address)
-                            logging.debug('THREAD_CONN: no more data from', client_address)
+
+                            logging.debug('THREAD_CONN: no more data from %s', client_address)
                             break
 
     def thread_trigger(self, c_address, queue_id):
         # creating queue
-        # print(sys.stderr, 'THREAD_QUEUE: creating queue for ', c_address)
-        logging.debug('THREAD_QUEUE: creating queue for ', c_address)
+
+        logging.debug('THREAD_QUEUE: creating queue for %s', c_address)
         connection = pika.BlockingConnection(
             pika.ConnectionParameters(host=self.IP))  # Connect to CloudAMQP
         channel = connection.channel()  # start a channel
@@ -148,4 +146,4 @@ class TCP_SERVER:
         channel.basic_publish(exchange='', routing_key=str(queue_id),
                               body=bytes(str(c_address[0]) + '#' + str(self.IDS_size), 'utf-8'))
         connection.close()  # closing connection
-        logging.debug('THREAD_QUEUE: closing queue for ', c_address)
+        logging.debug('THREAD_QUEUE: closing queue for %s', c_address)
