@@ -40,7 +40,7 @@ class Process:
             s.sendall(mess)
             data = s.recv(RCV_BUFFER_SIZE).decode()
             # print(sys.stderr, "This is the port given by the server: " + data)
-            logging.debug("PROCESS:This is the port given by the server: " + data)
+            logging.debug("PROCESS:This is the port given by the server: %s", data)
         port = 5000 + int(data)
         print("-----CONNECTION TO SERVER SUCCESSFULLY CREATED-----")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -74,8 +74,7 @@ class Process:
                 else:
                     break
 
-        # print(sys.stderr, "This is the list of id and ip", self.ids, self.ips)
-        logging.debug("PROCESS:This is the list of id and ip", self.ids, self.ips)
+        logging.debug("PROCESS: id list: %s,ip list %s", self.ids, self.ips)
         logging.info("PROCESS:Starting thread on function thread")
         print("-----GATHERED ALL THE PEERS IPS FROM THE BOOTSTRAP SERVER-----")
         print("-----STARTING SENDING OR RECEIVING MESSAGES-----")
@@ -100,12 +99,10 @@ class Process:
             self.AL[i].receiver()
 
     def __thread(self):
-        # print(sys.stderr, "Number of faulty processes is :" + str(self.faulty))
-        logging.debug("PROCESS:Number of faulty processes is :" + str(self.faulty))
+        logging.debug("PROCESS:Number of faulty processes is: %s", str(self.faulty))
         while True:
             for msg in self.currentMSG:
-                # print("MSG: ", msg)
-                logging.debug("PROCESS:Msg in currentMSG:", msg)
+                logging.debug("PROCESS:Msg in currentMSG: %s", msg)
                 counter_echos = 0
                 counter_readys = 0
 
@@ -115,23 +112,16 @@ class Process:
                 for i in self.readys.values():
                     if i == msg:
                         counter_readys += 1
-                # print(
-                #    "counter echos:",
-                #    counter_echos,
-                #     "N+f/2=",
-                #    (len(self.ids) + self.faulty) / 2,
-                #    "ECHOS: ",
-                #    self.echos.values(),
-                # )
-                logging.debug("PROCESS:Counter echos:", counter_echos, "N+f/2=", (len(self.ids) + self.faulty) / 2,
-                              "ECHOS: ", self.echos.values(), )
+
+                logging.debug("PROCESS:Counter echos: %d", counter_echos)
+                logging.debug("(N+f)/2 = %d", (len(self.ids) + self.faulty) / 2)
+                logging.debug("ECHOS = %s", self.echos.values())
 
                 if (
-                        counter_echos > (len(self.ids) + self.faulty) / 2
+                    counter_echos > (len(self.ids) + self.faulty) / 2
                 ) and self.sentready is False:
                     self.sentready = True
 
-                    # print("------ Starting ready part ------ ")
                     logging.info("PROCESS:------ Starting ready part ------ ")
                     # Broadcast to all a ready message
                     for i in range(len(self.ids)):
@@ -148,14 +138,10 @@ class Process:
 
                 if counter_readys > 2 * self.faulty and self.delivered is False:
                     self.delivered = True
-                    # print(
-                    #   sys.stderr,
-                    #  "PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip),
-                    # "Delivered:",
-                    # msg,
-                    # )
-                    logging.debug("PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip), "Delivered:", msg, )
-                    print("-----MESSAGE DELIVERED:-----", msg)
+
+                    logging.debug("PROCESS: %d,%s", self.selfid, self.selfip)
+
+                    print("-----MESSAGE DELIVERED:", msg)
 
             # Not to destroy performance
             time.sleep(BREAK_TIME)
@@ -164,20 +150,18 @@ class Process:
     # the other processes from its queue
     def __update(self):
         with pika.BlockingConnection(
-                pika.ConnectionParameters(host=SERVER_ID)
+            pika.ConnectionParameters(host=SERVER_ID)
         ) as connection:
             channel = connection.channel()
 
             response = channel.queue_declare(queue=str(self.selfid))
             # Get the queue length (number of not consumed messages)
             num = response.method.message_count
-            # print(
-            #    sys.stderr,
-            #   "PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip),
-            #  "My queue length:",
-            # num,
-            # )
-            logging.debug("PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip), "My queue length:", num, )
+
+            logging.debug(
+                "PROCESS: %d,%s --- My queue length: %d", self.selfid, self.selfip, num
+            )
+
             if num == 0:
                 channel.close()
                 return
@@ -185,10 +169,7 @@ class Process:
             self.counter = 0
 
             def callback(body):
-                # check the message ordering
-                # Returns the concatenation of ip and id
-                # print(sys.stderr, " [x] Received %r" % body)
-                logging.debug("PROCESS: [x] Received %r" % body)
+                # logging.debug("PROCESS: [x] Received %r", body)
                 queue_msg = body.decode("utf-8")
                 temp = queue_msg.split("#")
                 ip_from_queue = temp[0]
@@ -228,43 +209,31 @@ class Process:
             if msg not in self.currentMSG:
                 self.currentMSG.append(msg)
             self.sentecho = True
-            # print(
-            #   sys.stderr,
-            #  "PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip),
-            # "Starting the ECHO part...",
-            # )
-            logging.debug("PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip), "Starting the ECHO part...", )
+
+            logging.debug(
+                "PROCESS: %d,%s --- Starting the ECHO part...", self.selfid, self.selfip
+            )
+
             self.__update()  # If writer_id == 1 then it is correct, otherwise no
             for i in range(len(self.ids)):
                 self.AL[i].send(msg, flag="ECHO")
 
     def deliver_echo(self, msg, flag, idn):
-        # print("msg,", msg, "flag", flag, "id", id)
-        # print("CURRENTMSG", self.currentMSG)
-        logging.debug("PROCESS:Msg,", msg, "flag", flag, "id", idn)
-        logging.debug("PROCESS:CURRENTMSG", self.currentMSG)
+        logging.debug("PROCESS: Msg: %s, flag: %s, id: %d", msg, flag, idn)
+        logging.debug("PROCESS: CURRENTMSG %s", self.currentMSG)
         if flag == "ECHO" and idn not in self.echos:
             if msg not in self.currentMSG:
                 self.currentMSG.append(msg)
             self.echos[idn] = msg
-            # print(
-            #   sys.stderr,
-            #  "--------The dicts are {echos}:".format(echos=self.echos) + "-------\n",
-            # )
-            logging.debug("PROCESS: --------The dicts are {echos}:".format(echos=self.echos) + "-------\n", )
+
+            logging.debug("PROCESS: --------ECHOS VALUE: %s:", self.echos)
 
     def deliver_ready(self, msg, flag, idn):
-        # print("msg,", msg, "flag", flag, "id", id)
-        # print("CURRENTMSG", self.currentMSG)
-        logging.debug("PROCESS:Msg,", msg, "flag", flag, "id", idn)
-        logging.debug("PROCESS:CURRENTMSG", self.currentMSG)
+        logging.debug("PROCESS: Msg: %s, flag: %s, id: %d", msg, flag, idn)
+        logging.debug("PROCESS: CURRENTMSG %s", self.currentMSG)
         if flag == "READY" and idn not in self.readys:
             if msg not in self.currentMSG:
                 self.currentMSG.append(msg)
             self.readys[idn] = msg
-            # print(
-            #   sys.stderr,
-            #  "--------The dicts are {readys}:".format(readys=self.readys)
-            # + "-------\n",
-            # )
-            logging.debug("PROCESS: --------The dicts are {readys}:".format(readys=self.readys) + "-------\n", )
+
+            logging.debug("PROCESS: --------READYS VALUE: %s:", self.readys)
