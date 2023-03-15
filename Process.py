@@ -1,3 +1,5 @@
+import math
+
 import pika as pika
 import sys
 import AuthenticatedLink
@@ -7,7 +9,7 @@ import time
 import json
 import struct
 
-SERVER_ID = "192.168.1.31"
+SERVER_ID = "192.168.1.40"
 SERVER_PORT = 5000
 
 RCV_BUFFER_SIZE = 1024
@@ -27,7 +29,7 @@ class Process:
         self.delivered = False
         self.echos = {}
         self.readys = {}
-        self.faulty = len(self.ids) / 3
+        self.faulty = math.floor(len(self.ids) / 3)
 
     def connectionToServer(self):
         # It starts a connection to the server to obtain a port number
@@ -36,7 +38,7 @@ class Process:
             mess = bytes("Hello", "utf-8")
             s.sendall(mess)
             data = s.recv(RCV_BUFFER_SIZE).decode()
-            print("This is the port given by the server: " + data)
+            print(sys.stderr,"This is the port given by the server: " + data)
 
         port = 5000 + int(data)
 
@@ -76,11 +78,11 @@ class Process:
         t.start()
 
     def creationLinks(self):
-        # hostname = socket.gethostname()
-        # IPAddr = socket.gethostbyname(hostname)
-        # self.selfip = IPAddr
+        hostname = socket.gethostname()
+        IPAddr = socket.gethostbyname(hostname)
+        self.selfip = IPAddr
 
-        self.selfip = "192.168.1.32"  # TODO remove
+        # self.selfip = "192.168.1.32"  # TODO remove
 
         self.selfid = self.ids[self.ips.index(self.selfip)]
         for i in range(0, len(self.ids)):
@@ -92,6 +94,7 @@ class Process:
             self.AL[i].receiver()
 
     def __thread(self):
+        print(sys.stderr,"Number of faulty processes is :"+str(self.faulty))
         while True:
             for msg in self.currentMSG:
                 counter_echos = 0
@@ -124,7 +127,7 @@ class Process:
                     self.delivered = True
                     print(
                         sys.stderr,
-                        "PROCESS:{id},{ip}".format(id=self.id, ip=self.ip),
+                        "PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip),
                         "Delivered:",
                         msg,
                     )
@@ -145,7 +148,7 @@ class Process:
             num = response.method.message_count
             print(
                 sys.stderr,
-                "PROCESS:{id},{ip}".format(id=self.id, ip=self.ip),
+                "PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip),
                 "My queue length:",
                 num,
             )
@@ -158,7 +161,7 @@ class Process:
             def callback(ch, method, properties, body):
                 # check the message ordering
                 # Returns the concatenation of ip and id
-                print(" [x] Received %r" % body)
+                print(sys.stderr," [x] Received %r" % body)
                 queue_msg = body.decode("utf-8")
                 temp = queue_msg.split("#")
                 ip_from_queue = temp[0]
@@ -200,7 +203,7 @@ class Process:
             self.sentecho = True
             print(
                 sys.stderr,
-                "PROCESS:{id},{ip}".format(id=self.id, ip=self.ip),
+                "PROCESS:{id},{ip}".format(id=self.selfid, ip=self.selfip),
                 "Starting the ECHO part...",
             )
             self.__update()  # If writer_id == 1 then it is correct, otherwise no
@@ -208,11 +211,19 @@ class Process:
                 self.AL[i].send(msg, flag="ECHO")
 
     def deliverEcho(self, msg, flag, id):
-        if flag == "ECHO" and id in self.echos and msg not in self.currentMSG:
-            self.currentMSG.append(msg)
+        print("msg,",msg,"flag",flag,"id",id)
+        print("CURRENTMSG",self.currentMSG)
+        if flag == "ECHO" and id not in self.echos :
+            if msg not in self.currentMSG:
+                self.currentMSG.append(msg)
             self.echos[id] = msg
+            print(sys.stderr, "--------The dicts are {echos}:".format(echos=self.echos) + '-------\n')
 
     def deliverReady(self, msg, flag, id):
-        if flag == "READY" and id in self.readys and msg not in self.currentMSG:
-            self.currentMSG.append(msg)
+        print("msg,", msg, "flag", flag, "id", id)
+        print("CURRENTMSG", self.currentMSG)
+        if flag == "READY" and id not in self.readys:
+            if msg not in self.currentMSG:
+                self.currentMSG.append(msg)
             self.readys[id] = msg
+            print(sys.stderr, "--------The dicts are {readys}:".format(readys=self.readys) + '-------\n')
