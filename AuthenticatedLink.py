@@ -1,4 +1,3 @@
-import random
 import socket
 import hashlib
 import hmac
@@ -6,8 +5,6 @@ import json
 import logging
 from threading import Thread
 import threading
-import time
-import struct
 
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
@@ -33,6 +30,7 @@ class AuthenticatedLink:
     # This handles the message receive
     # Now the listening port is the concatenation 50/5 - 'receiving process' - 'sending process'
     def __receive(self):
+        ready = False
         host = ""  # Symbolic name meaning all available interfaces
         # It uses ternary operator
         port = (
@@ -48,32 +46,38 @@ class AuthenticatedLink:
             self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.s.bind((host, port))
             self.s.listen(0)
-            conn, addr = self.s.accept()
+            while True:
+                conn, addr = self.s.accept()
 
-            with conn:
-                logging.info("AUTH:Connected by %s", addr)
-                while True:
-                    data = conn.recv(RCV_BUFFER_SIZE)
-                    if not data:
-                        break
+                with conn:
+                    logging.info("AUTH:Connected by %s", addr)
+                    while True:
+                        data = conn.recv(RCV_BUFFER_SIZE)
+                        if not data:
+                            break
 
-                    parsed_data = json.loads(data.decode())
+                        parsed_data = json.loads(data.decode())
 
-                    logging.info(
-                        "AUTH: <%s, %d> -- sent this data %s",
-                        self.ip,
-                        self.id,
-                        parsed_data,
-                    )
-                    if "MSG" not in parsed_data.keys():
-                        self.__add_key(parsed_data)
-                        conn.sendall(b"synACK")
-                    else:
-                        t = Thread(
-                            target=self.__deliver,
-                            args=(parsed_data, threading.currentThread()),
+                        logging.info(
+                            "AUTH: <%s, %d> -- sent this data %s",
+                            self.ip,
+                            self.id,
+                            parsed_data,
                         )
-                        t.start()
+                        if "MSG" not in parsed_data.keys():
+                            self.__add_key(parsed_data)
+                            conn.sendall(b"synACK")
+                        else:
+                            t = Thread(
+                                target=self.__deliver,
+                                args=(parsed_data, threading.currentThread()),
+                            )
+                            t.start()
+                            if "READY" in parsed_data.values():
+                                ready = True
+
+                if ready:
+                    break
 
             logging.info(
                 "AUTH:------- SOCKET CLOSED, ME: %s,TO: %s", self.self_ip, self.ip
@@ -132,8 +136,6 @@ class AuthenticatedLink:
             "AUTH: Port used to connect: %d to <%s,%d>", port, self.ip, self.id
         )
 
-        time.sleep(0.5)
-
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sock.connect((self.ip, port))
@@ -162,10 +164,6 @@ class AuthenticatedLink:
         if not self.__check_auth(msg, attached_mac, flag):
             logging.info("--- Authenticity check failed for %s", message)
             # TODO what do if authenticity check fails??
-
-        if flag != "READY":
-            t.join()
-            self.receiver()
 
         if flag == "SEND":
             self.proc.deliver_send(msg, flag, self.id)
