@@ -228,7 +228,7 @@ class Process:
                 self.echo_counter[["ECHO", echo["Source"], echo["Message"], echo["SequenceNumber"]]] += 1
             self.check(echo["Source"], echo["Message"], echo["SequenceNumber"])
 
-    def receiving_acc(self, acc ,id):
+    def receiving_acc(self, acc, id):
         if self.first(acc, "ACC", id):
             # in the self.acc_counter, storing the number of accs received is not enough,
             # but you have to store also the ids of the processes that sent them

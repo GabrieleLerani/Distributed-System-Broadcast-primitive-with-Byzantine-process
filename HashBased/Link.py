@@ -4,8 +4,6 @@ import logging
 from threading import Thread
 
 RCV_BUFFER_SIZE = 1024
-KEY_SIZE = 32
-
 
 class Link:
     def __init__(self, self_id, self_ip, idn, ip, proc):
@@ -14,7 +12,6 @@ class Link:
         self.id = idn  # id of receiving process
         self.self_ip = self_ip
         self.ip = ip
-        self.key = {}
 
     def get_id(self):
         return self.id
@@ -67,7 +64,18 @@ class Link:
                             args=(parsed_data),
                         )
                         t.start()
-                        if "READY" in parsed_data.values():
+                        # if you receive an ACC for some message M from some other process,
+                        # it means that it received at least n-f ECHOs for that message M,
+                        # so it is safe to close the socket with it
+                        # (it received at least f+1 ECHOs from correct processes,
+                        # so it is impossible that it will send a REQ message;
+                        # in fact, even if it receives the same message from all the faulty processes
+                        # it will not send it because they are at most f)
+                        # Otherwise, if you don't receive an ACC from someone,
+                        # it may mean that it did not receive the message at all,
+                        # so it may ask you about the message associated to the ACC that it received
+                        # (indeed, you will send / sent an ACC message to it too)
+                        if "ACC" in parsed_data.values():
                              ready = True
 
                 if ready:
@@ -104,16 +112,15 @@ class Link:
             logging.info("AUTH: %s sent to <%s, %d>", message, self.ip, self.id)
 
     def __receiving(self, message):
-        msg = message["MSG"]
-        flag = message["FLAG"]
+        flag = message["Flag"]
 
         if flag == "MSG":
-            self.proc.receiving_msg(msg, self.id)
+            self.proc.receiving_msg(message, self.id)
         elif flag == "ECHO":
-            self.proc.deliver_echo(msg, flag, self.id)
+            self.proc.receiving_echo(message, self.id)
         elif flag == "ACC":
-            self.proc.deliver_ready(msg, flag, self.id)
+            self.proc.receiving_acc(message, self.id)
         elif flag == "REQ":
-            self.proc.deliver_ready(msg, flag, self.id)
+            self.proc.receiving_req(message, self.id)
         elif flag == "FWD":
-            self.proc.deliver_ready(msg, flag, self.id)
+            self.proc.receiving_fwd(message, self.id)

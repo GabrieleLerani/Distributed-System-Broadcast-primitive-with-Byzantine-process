@@ -1,16 +1,17 @@
-# This is a sample Python script.
+import time
+import Process
 
-# Press Maiusc+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+TIME_SLEEP = 10
 
 
-# Press the green button in the gutter to run the script.
+#Role = "Broadcaster"
+Role = "Receiver"
+
 if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    p = Process.Process()
+    p.connection_to_server()
+    p.creation_links()
+    if Role == "Broadcaster":
+        time.sleep(TIME_SLEEP)
+        p.broadcast("Hello!")
+    exit(0)
