@@ -1,6 +1,7 @@
 import socket
 import json
-import logging
+import threading
+from threading import Lock
 from threading import Thread
 
 RCV_BUFFER_SIZE = 1024
@@ -12,13 +13,12 @@ class Link:
         self.id = idn  # id of receiving process
         self.self_ip = self_ip
         self.ip = ip
+        self.lock = threading.Lock()
 
     def get_id(self):
         return self.id
 
     def receiver(self):
-        # print("Start thread to receive messages...")
-        logging.info("AUTH:Start thread to receive messages...")
         t = Thread(target=self.__receive)
         t.start()
 
@@ -33,9 +33,8 @@ class Link:
             if self.self_id < 10 and self.id < 10
             else int("5" + str(self.id) + str(self.self_id))
         )
-        print(port)
 
-        logging.info("AUTH:Port used for receiving: %d", port)
+        print(port)
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s:
             self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -45,7 +44,6 @@ class Link:
                 conn, addr = self.s.accept()
 
                 with conn:
-                    logging.info("AUTH:Connected by %s", addr)
                     while True:
                         data = conn.recv(RCV_BUFFER_SIZE)
                         if not data:
@@ -53,15 +51,10 @@ class Link:
 
                         parsed_data = json.loads(data.decode())
 
-                        print(parsed_data)
-                        print(isinstance(parsed_data, dict))
+                        self.lock.acquire()
+                        print("Message received by ", self.ip, ":", parsed_data)
+                        self.lock.release()
 
-                        logging.info(
-                            "AUTH: <%s, %d> -- sent this data %s",
-                            self.ip,
-                            self.id,
-                            parsed_data,
-                        )
                         t = Thread(
                             target=self.__receiving,
                             args=(parsed_data,)
@@ -84,10 +77,6 @@ class Link:
                 if ready:
                     break
 
-            logging.info(
-                "AUTH:------- SOCKET CLOSED, ME: %s,TO: %s", self.self_ip, self.ip
-            )
-
     # The SEND opens a new socket, the port is the concatenation of 50/5- id of sending process - id of receiving process
     # Example: sending_id = 1, receiving_id = 2 ---> port = 5012
     def send(self, message):
@@ -101,18 +90,16 @@ class Link:
             else int("5" + str(self.self_id) + str(self.id))
         )
 
-        logging.info(
-            "AUTH: Port used to connect: %d to <%s,%d>", port, self.ip, self.id
-        )
-
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sock.connect((self.ip, port))
 
+            self.lock.acquire()
+            print(message, "sent to <", self.ip, self.id, ">")
+            self.lock.release()
+
             parsed_data = json.dumps(message)
             self.sock.sendall(bytes(parsed_data, encoding="utf-8"))
-
-            logging.info("AUTH: %s sent to <%s, %d>", message, self.ip, self.id)
 
     def __receiving(self, message):
         flag = message["Flag"]

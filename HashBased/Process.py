@@ -7,12 +7,11 @@ import json
 import struct
 import logging
 import math
-#import MessageSet
 
 SERVER_ID = "192.168.1.30"
 SERVER_PORT = 5000
 
-RCV_BUFFER_SIZE = 1024
+RCV_BUFFER_SIZE = 2048
 BREAK_TIME = 0.1
 
 class Process:
@@ -189,16 +188,6 @@ class Process:
             else:
                 self.MsgSets[(message["Source"], message["SequenceNumber"])].append(message["Message"])
 
-            # TODO Uncomment this part only if the previous part does not work
-            #thereis = False
-            # to check if there is already a MessageSet with same source and same sequence number
-            #for i in range(len(self.MsgSets)):
-            #    if message["Source"] == self.MsgSets[i].get_source() and message["SequenceNumber"] == self.MsgSets[i].get_sn():
-            #        thereis = True
-            # otherwise it is added to the list
-            #if not thereis:
-            #    self.MsgSets.append(MessageSet.MessageSet(message["Source"], message["SequenceNumber"]))
-
             hashed_message = self.__hash(message["Message"])
 
             if ("ECHO", message["Source"], hashed_message, message["SequenceNumber"]) not in self.echo_counter:
@@ -292,6 +281,7 @@ class Process:
 
     def check(self, source, hash, sequence_number):
         for msg in self.MsgSets[(source, sequence_number)]:
+            print(self.echo_counter, self.echos_rec, self.accs_sent)
             if self.__hash(msg) == hash:
 
                 # the two ifs are merged inside only one because there is no action taken without one of them
@@ -301,44 +291,46 @@ class Process:
                         self.links[i].send(packet)
 
                 if self.echo_counter[("ECHO", source, hash, sequence_number)] >= len(self.ips) - self.faulty and ("ACC", source, sequence_number) not in self.accs_sent:
+                    print("Echos received: ", self.echos_rec)
+                    print("-----ACC PHASE-----")
                     packet = {"Flag": "ACC", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
                     for i in range(len(self.links)):
                         self.links[i].send(packet)
                     self.accs_sent.append(["ACC", source, sequence_number])
 
-                if self.acc_counter[("ACC", source, hash, sequence_number)] >= self.faulty + 1 and ("ACC", source, sequence_number) not in self.accs_sent:
+                if len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= self.faulty + 1 and ("ACC", source, sequence_number) not in self.accs_sent:
                     packet = {"Flag": "ACC", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
                     for i in range(len(self.links)):
                         self.links[i].send(packet)
                     self.accs_sent.append(["ACC", source, sequence_number])
 
-                if self.acc_counter[("ACC", source, hash, sequence_number)] >= len(self.ips) - self.faulty:
+                if len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= len(self.ips) - self.faulty:
                     print("-----Message Delivered-----")
                     print("-----<%s,%s,%s>-----", source, msg, sequence_number)
 
     def first(self, message, flag, sender):
         if flag == "MSG":
-            for i in range(len(self.msg)):
-                if message["Source"] in self.msg[i] and message["SequenceNumber"] in self.msg[i]:
-                    return False
-            return True
+            if ["MSG", message["Source"], message["SequenceNumber"]] not in self.msg:
+                self.msg.append(["MSG", message["Source"], message["SequenceNumber"]])
+                return True
+            return False
         elif flag == "ECHO":
             if ["ECHO", message["Source"], message["SequenceNumber"], sender] not in self.echos_rec:
                 self.echos_rec.append(["ECHO", message["Source"], message["SequenceNumber"], sender])
-                return False
-            return True
+                return True
+            return False
         elif flag == "ACC":
             if ["ACC", message["Source"], message["SequenceNumber"], sender] not in self.accs_rec:
                 self.accs_rec.append(["ACC", message["Source"], message["SequenceNumber"], sender])
-                return False
-            return True
+                return True
+            return False
         elif flag == "REQ":
             if ["REQ", message["Source"], message["SequenceNumber"], sender] not in self.reqs_rec:
                 self.reqs_rec.append(["REQ", message["Source"], message["SequenceNumber"], sender])
-                return False
-            return True
+                return True
+            return False
         elif flag == "FWD":
             if ["FWD", message["Source"], message["Message"], message["SequenceNumber"], sender] not in self.fwds_rec:
                 self.fwds_rec.append(["FWD", message["Source"], message["Message"], message["SequenceNumber"], sender])
-                return False
-            return True
+                return True
+            return False
