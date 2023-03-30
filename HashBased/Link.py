@@ -53,6 +53,9 @@ class Link:
 
                         parsed_data = json.loads(data.decode())
 
+                        print(parsed_data)
+                        print(isinstance(parsed_data, dict))
+
                         logging.info(
                             "AUTH: <%s, %d> -- sent this data %s",
                             self.ip,
@@ -61,7 +64,7 @@ class Link:
                         )
                         t = Thread(
                             target=self.__receiving,
-                            args=(parsed_data),
+                            args=(parsed_data,)
                         )
                         t.start()
                         # if you receive an ACC for some message M from some other process,

@@ -4,8 +4,8 @@ import Process
 TIME_SLEEP = 10
 
 
-#Role = "Broadcaster"
-Role = "Receiver"
+Role = "Broadcaster"
+#Role = "Receiver"
 
 if __name__ == '__main__':
     p = Process.Process()

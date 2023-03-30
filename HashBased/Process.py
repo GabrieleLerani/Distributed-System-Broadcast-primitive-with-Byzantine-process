@@ -145,7 +145,7 @@ class Process:
                 id_from_queue = temp[1]
                 if ip_from_queue not in self.ips:
                     self.ips.append(ip_from_queue)
-                    self.links.append(int(id_from_queue))
+                    self.ids.append(int(id_from_queue))
                     self.links.append(
                         Link.Link(
                             self.selfid,
@@ -176,18 +176,18 @@ class Process:
 
     # message must be a string
     def __hash(self, message):
-        return hashlib.sha256(bytes(message)).hexdigest()
+        return hashlib.sha256(bytes(message, "utf-8")).hexdigest()
 
     def receiving_msg(self, message, id):
         # the id is not needed for the check of MSG messages but the function requires it anyway
         if message["Source"] == id and self.first(message, "MSG", id):
             # if the tuple Source,SN is not in MsgSets then you add it with an empty list
             # that will be filled with next messages
-            if [message["Source"], message["SequenceNumber"]] not in self.MsgSets:
-                self.MsgSets.update({[message["Source"], message["SequenceNumber"]]:[message["Message"]]})
+            if (message["Source"], message["SequenceNumber"]) not in self.MsgSets:
+                self.MsgSets.update({(message["Source"], message["SequenceNumber"]): [message["Message"]]})
             # if MsgSets contains already that tuple then you add message to the corresponding list
             else:
-                self.MsgSets[[message["Source"], message["SequenceNumber"]]].append(message["Message"])
+                self.MsgSets[(message["Source"], message["SequenceNumber"])].append(message["Message"])
 
             # TODO Uncomment this part only if the previous part does not work
             #thereis = False
@@ -201,13 +201,13 @@ class Process:
 
             hashed_message = self.__hash(message["Message"])
 
-            if ["ECHO", message["Source"], hashed_message, message["SequenceNumber"]] not in self.echo_counter:
+            if ("ECHO", message["Source"], hashed_message, message["SequenceNumber"]) not in self.echo_counter:
                 # if the counter is not initialized yet then it initializes the counter and assignes the value 1 to it
                 # (because there is the message just received)
-                self.echo_counter.update({["ECHO", message["Source"], hashed_message, message["SequenceNumber"]]:1})
+                self.echo_counter.update({("ECHO", message["Source"], hashed_message, message["SequenceNumber"]): 1})
             else:
                 # otherwise it increases its value
-                self.echo_counter[["ECHO", message["Source"], hashed_message, message["SequenceNumber"]]] += 1
+                self.echo_counter[("ECHO", message["Source"], hashed_message, message["SequenceNumber"])] += 1
 
             if ["ECHO", message["Source"], message["SequenceNumber"]] not in self.echos_sent:
                 # if it has not sent an echo with same source,sn yet
@@ -219,13 +219,13 @@ class Process:
 
     def receiving_echo(self, echo, id):
         if self.first(echo, "ECHO", id):
-            if ["ECHO", echo["Source"], echo["Message"], echo["SequenceNumber"]] not in self.echo_counter:
+            if ("ECHO", echo["Source"], echo["Message"], echo["SequenceNumber"]) not in self.echo_counter:
                 # if the counter is not initialized yet then it initializes the counter and assignes the value 1 to it
                 # (because there is the message just received)
-                self.echo_counter.update({["ECHO", echo["Source"], echo["Message"], echo["SequenceNumber"]]:1})
+                self.echo_counter.update({("ECHO", echo["Source"], echo["Message"], echo["SequenceNumber"]): 1})
             else:
                 # otherwise it increases its value
-                self.echo_counter[["ECHO", echo["Source"], echo["Message"], echo["SequenceNumber"]]] += 1
+                self.echo_counter[("ECHO", echo["Source"], echo["Message"], echo["SequenceNumber"])] += 1
             self.check(echo["Source"], echo["Message"], echo["SequenceNumber"])
 
     def receiving_acc(self, acc, id):
@@ -237,23 +237,23 @@ class Process:
             # so it asks to f+1 nodes to send their messages to it (because f is the number of the faulty processes,
             # it is sure to get at least one answer from a correct process by asking it to f+1)
 
-            if ["ACC", acc["Source"], acc["Message"], acc["SequenceNumber"]] not in self.acc_counter:
+            if ("ACC", acc["Source"], acc["Message"], acc["SequenceNumber"]) not in self.acc_counter:
                 # if the counter is not initialized yet then it initializes the counter
                 # and stores the id of the one that sent the acc
-                self.acc_counter.update({["ACC", acc["Source"], acc["Message"], acc["SequenceNumber"]]:[id]})
+                self.acc_counter.update({("ACC", acc["Source"], acc["Message"], acc["SequenceNumber"]): [id]})
             else:
                 # otherwise it simply adds the id of the sender
-                self.acc_counter[["ACC", acc["Source"], acc["Message"], acc["SequenceNumber"]]].append(id)
+                self.acc_counter[("ACC", acc["Source"], acc["Message"], acc["SequenceNumber"])].append(id)
 
-            if len(self.acc_counter[["ACC", acc["Source"], acc["Message"], acc["SequenceNumber"]]]) == self.faulty + 1:
-                msgs = self.MsgSets[[acc["Source"], acc["SequenceNumber"]]]
+            if len(self.acc_counter[("ACC", acc["Source"], acc["Message"], acc["SequenceNumber"])]) == self.faulty + 1:
+                msgs = self.MsgSets[(acc["Source"], acc["SequenceNumber"])]
                 thereis = False
                 for msg in msgs:
                     if self.__hash(msg) == acc["Message"]:
                         thereis = True
                 if not thereis:
                     for i in range(len(self.links)):
-                        for link_id in self.acc_counter[["ACC", acc["Source"], acc["Message"], acc["SequenceNumber"]]]:
+                        for link_id in self.acc_counter[("ACC", acc["Source"], acc["Message"], acc["SequenceNumber"])]:
                             if link_id == self.links[i].get_id():
                                 packet = {"Flag": "REQ", "Source": acc["Source"], "Message": acc["Message"],
                                           "SequenceNumber": acc["SequenceNumber"]}
@@ -268,7 +268,7 @@ class Process:
         if self.first(req, "REQ", id):
             thereis = False
             sel_msg = None
-            for msg in self.MsgSets[[req["Source"], req["SequenceNumber"]]]:
+            for msg in self.MsgSets[(req["Source"], req["SequenceNumber"])]:
                 if self.__hash(msg) == req["Message"]:
                     sel_msg = msg
                     thereis =True
@@ -283,36 +283,36 @@ class Process:
         if ["REQ", fwd["Source"], self.__hash(fwd["Message"]), fwd["SequenceNumber"], id] in self.reqs_sent and self.first(fwd, "FWD", id):
             # if the tuple Source,SN is not in MsgSets then you add it with an empty list
             # that will be filled with next messages
-            if [fwd["Source"], fwd["SequenceNumber"]] not in self.MsgSets:
+            if (fwd["Source"], fwd["SequenceNumber"]) not in self.MsgSets:
                 self.MsgSets.update({[fwd["Source"], fwd["SequenceNumber"]]: [fwd["Message"]]})
             # if MsgSets contains already that tuple then you add message to the corresponding list
             else:
-                self.MsgSets[[fwd["Source"], fwd["SequenceNumber"]]].append(fwd["Message"])
+                self.MsgSets[(fwd["Source"], fwd["SequenceNumber"])].append(fwd["Message"])
             self.check(fwd["Source"], self.__hash(fwd["Message"]), fwd["SequenceNumber"])
 
     def check(self, source, hash, sequence_number):
-        for msg in self.MsgSets[[source, sequence_number]]:
+        for msg in self.MsgSets[(source, sequence_number)]:
             if self.__hash(msg) == hash:
 
                 # the two ifs are merged inside only one because there is no action taken without one of them
-                if self.echo_counter[["ECHO", source, hash, sequence_number]] >= self.faulty + 1 and ["ECHO", source, sequence_number] not in self.echos_rec:
+                if self.echo_counter[("ECHO", source, hash, sequence_number)] >= self.faulty + 1 and ["ECHO", source, sequence_number] not in self.echos_rec:
                     packet = {"Flag": "ECHO", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
                     for i in range(len(self.links)):
                         self.links[i].send(packet)
 
-                if self.echo_counter[["ECHO", source, hash, sequence_number]] >= len(self.ips) - self.faulty and ["ACC", source, sequence_number] not in self.accs_sent:
+                if self.echo_counter[("ECHO", source, hash, sequence_number)] >= len(self.ips) - self.faulty and ("ACC", source, sequence_number) not in self.accs_sent:
                     packet = {"Flag": "ACC", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
                     for i in range(len(self.links)):
                         self.links[i].send(packet)
                     self.accs_sent.append(["ACC", source, sequence_number])
 
-                if self.acc_counter[["ACC", source, hash, sequence_number]] >= self.faulty + 1 and ["ACC", source, sequence_number] not in self.accs_sent:
+                if self.acc_counter[("ACC", source, hash, sequence_number)] >= self.faulty + 1 and ("ACC", source, sequence_number) not in self.accs_sent:
                     packet = {"Flag": "ACC", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
                     for i in range(len(self.links)):
                         self.links[i].send(packet)
                     self.accs_sent.append(["ACC", source, sequence_number])
 
-                if self.acc_counter[["ACC", source, hash, sequence_number]] >= len(self.ips) - self.faulty:
+                if self.acc_counter[("ACC", source, hash, sequence_number)] >= len(self.ips) - self.faulty:
                     print("-----Message Delivered-----")
                     print("-----<%s,%s,%s>-----", source, msg, sequence_number)
 
