@@ -1,6 +1,6 @@
 import hashlib
 import pika as pika
-import Link
+import AuthenticatedLink
 import socket
 import threading
 import json
@@ -21,7 +21,7 @@ class Process:
         self.id = 0
         self.ips = []
         self.ids = []
-        self.links = []
+        self.AL = []
         # messages received
         self.msg =[]
         self.MsgSets = {}   # TODO if the not commented part inside receiving_msg does not work you must make MsgSets a list of MessageSet
@@ -107,12 +107,12 @@ class Process:
         self.selfid = self.ids[self.ips.index(self.selfip)]
         self.barrier = threading.Barrier(parties=2)
         for i in range(0, len(self.ids)):
-            self.links.append(
-                Link.Link(
+            self.AL.append(
+                AuthenticatedLink.AuthenticatedLink(
                     self.selfid, self.selfip, self.ids[i], self.ips[i], self
                 )
             )
-            self.links[i].receiver()
+            self.AL[i].receiver()
 
     # Before starting broadcast, a process reads the ip addresses and ids of
     # the other processes from its queue
@@ -145,8 +145,8 @@ class Process:
                 if ip_from_queue not in self.ips:
                     self.ips.append(ip_from_queue)
                     self.ids.append(int(id_from_queue))
-                    self.links.append(
-                        Link.Link(
+                    self.AL.append(
+                        AuthenticatedLink.AuthenticatedLink(
                             self.selfid,
                             self.selfip,
                             self.ids[len(self.ids) - 1],
@@ -154,7 +154,7 @@ class Process:
                             self,
                         )
                     )
-                    self.links[len(self.links) - 1].receiver()
+                    self.AL[len(self.AL) - 1].receiver()
                 self.counter += 1
                 if self.counter == num:
                     channel.stop_consuming()
@@ -170,8 +170,8 @@ class Process:
         self.faulty = math.floor(len(self.ids) / 3)
         # TODO va aggiunta la creazione dei link
         packet = {"Flag": "MSG", "Source": self.selfid, "Message": message, "SequenceNumber": self.h}
-        for i in range(len(self.links)):
-            self.links[i].send(packet)
+        for i in range(len(self.AL)):
+            self.AL[i].send(packet)
 
     # message must be a string
     def __hash(self, message):
@@ -201,8 +201,8 @@ class Process:
             if ["ECHO", message["Source"], message["SequenceNumber"]] not in self.echos_sent:
                 # if it has not sent an echo with same source,sn yet
                 packet = {"Flag": "ECHO", "Source": message["Source"], "Message": hashed_message, "SequenceNumber": message["SequenceNumber"]}
-                for i in range(len(self.links)):
-                    self.links[i].send(packet)
+                for i in range(len(self.AL)):
+                    self.AL[i].send(packet)
                 # then it inserts the ECHO sent in the variable so that it is not sent again
                 self.echos_sent.append(["ECHO", message["Source"], message["SequenceNumber"]])
 
@@ -241,12 +241,12 @@ class Process:
                     if self.__hash(msg) == acc["Message"]:
                         thereis = True
                 if not thereis:
-                    for i in range(len(self.links)):
+                    for i in range(len(self.AL)):
                         for link_id in self.acc_counter[("ACC", acc["Source"], acc["Message"], acc["SequenceNumber"])]:
-                            if link_id == self.links[i].get_id():
+                            if link_id == self.AL[i].get_id():
                                 packet = {"Flag": "REQ", "Source": acc["Source"], "Message": acc["Message"],
                                           "SequenceNumber": acc["SequenceNumber"]}
-                                self.links[i].send(packet)
+                                self.AL[i].send(packet)
                                 # it adds the current packet and the id of the receiver to keep track of them
                                 # for the check that receiving_fwd will do
                                 self.reqs_sent.append(["REQ", acc["Source"], acc["Message"], acc["SequenceNumber"], id])
@@ -262,11 +262,11 @@ class Process:
                     sel_msg = msg
                     thereis =True
             if thereis:
-                for i in range(len(self.links)):
-                    if id == self.links[i].get_id():
+                for i in range(len(self.AL)):
+                    if id == self.AL[i].get_id():
                         packet = {"Flag": "FWD", "Source": req["Source"], "Message": sel_msg,
                                   "SequenceNumber": req["SequenceNumber"]}
-                        self.links[i].send(packet)
+                        self.AL[i].send(packet)
 
     def receiving_fwd(self, fwd, id):
         if ["REQ", fwd["Source"], self.__hash(fwd["Message"]), fwd["SequenceNumber"], id] in self.reqs_sent and self.first(fwd, "FWD", id):
@@ -287,21 +287,21 @@ class Process:
                 # the two ifs are merged inside only one because there is no action taken without one of them
                 if self.echo_counter[("ECHO", source, hash, sequence_number)] >= self.faulty + 1 and ["ECHO", source, sequence_number] not in self.echos_rec:
                     packet = {"Flag": "ECHO", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
-                    for i in range(len(self.links)):
-                        self.links[i].send(packet)
+                    for i in range(len(self.AL)):
+                        self.AL[i].send(packet)
 
                 if self.echo_counter[("ECHO", source, hash, sequence_number)] >= len(self.ips) - self.faulty and ("ACC", source, sequence_number) not in self.accs_sent:
                     print("Echos received: ", self.echos_rec)
                     print("-----ACC PHASE-----")
                     packet = {"Flag": "ACC", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
-                    for i in range(len(self.links)):
-                        self.links[i].send(packet)
+                    for i in range(len(self.AL)):
+                        self.AL[i].send(packet)
                     self.accs_sent.append(["ACC", source, sequence_number])
 
                 if len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= self.faulty + 1 and ("ACC", source, sequence_number) not in self.accs_sent:
                     packet = {"Flag": "ACC", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
-                    for i in range(len(self.links)):
-                        self.links[i].send(packet)
+                    for i in range(len(self.AL)):
+                        self.AL[i].send(packet)
                     self.accs_sent.append(["ACC", source, sequence_number])
 
                 if len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= len(self.ips) - self.faulty:
