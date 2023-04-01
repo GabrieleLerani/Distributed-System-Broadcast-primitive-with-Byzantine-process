@@ -8,7 +8,7 @@ import struct
 import logging
 import math
 
-SERVER_ID = "192.168.1.30"
+SERVER_ID = "192.168.1.41"
 SERVER_PORT = 5000
 
 RCV_BUFFER_SIZE = 2048
@@ -172,6 +172,7 @@ class Process:
         packet = {"Flag": "MSG", "Source": self.selfid, "Message": message, "SequenceNumber": self.h}
         for i in range(len(self.AL)):
             self.AL[i].send(packet)
+        self.barrier.wait()
 
     # message must be a string
     def __hash(self, message):
@@ -190,21 +191,25 @@ class Process:
 
             hashed_message = self.__hash(message["Message"])
 
-            if ("ECHO", message["Source"], hashed_message, message["SequenceNumber"]) not in self.echo_counter:
+            # UNCOMMENT THIS SECTION TO BE MORE LOYAL TO THE SPECIFICATION
+            #if ("ECHO", message["Source"], hashed_message, message["SequenceNumber"]) not in self.echo_counter:
                 # if the counter is not initialized yet then it initializes the counter and assignes the value 1 to it
                 # (because there is the message just received)
-                self.echo_counter.update({("ECHO", message["Source"], hashed_message, message["SequenceNumber"]): 1})
-            else:
+            #    self.echo_counter.update({("ECHO", message["Source"], hashed_message, message["SequenceNumber"]): 1})
+            #else:
                 # otherwise it increases its value
-                self.echo_counter[("ECHO", message["Source"], hashed_message, message["SequenceNumber"])] += 1
+            #    self.echo_counter[("ECHO", message["Source"], hashed_message, message["SequenceNumber"])] += 1
+
+            self.barrier.wait()
 
             if ["ECHO", message["Source"], message["SequenceNumber"]] not in self.echos_sent:
-                # if it has not sent an echo with same source,sn yet
+                # It inserts the ECHO sent in the variable so that it is not sent again
+                # It is done before the actual send because sending it to all other nodes is time-consuming,
+                # so the process receives its own ECHO message before the insertion of the message
+                self.echos_sent.append(["ECHO", message["Source"], message["SequenceNumber"]])
                 packet = {"Flag": "ECHO", "Source": message["Source"], "Message": hashed_message, "SequenceNumber": message["SequenceNumber"]}
                 for i in range(len(self.AL)):
                     self.AL[i].send(packet)
-                # then it inserts the ECHO sent in the variable so that it is not sent again
-                self.echos_sent.append(["ECHO", message["Source"], message["SequenceNumber"]])
 
     def receiving_echo(self, echo, id):
         if self.first(echo, "ECHO", id):
@@ -251,7 +256,11 @@ class Process:
                                 # for the check that receiving_fwd will do
                                 self.reqs_sent.append(["REQ", acc["Source"], acc["Message"], acc["SequenceNumber"], id])
 
-            self.check(id, acc["Message"], acc["SequenceNumber"])
+            # This is a revised version of the code where it does not check the id of the sender
+            # but the id of the source
+            self.check(acc["Source"], acc["Message"], acc["SequenceNumber"])
+            # This is the original version of the algorithm
+            # self.check(id, acc["Message"], acc["SequenceNumber"])
 
     def receiving_req(self, req, id):
         if self.first(req, "REQ", id):
@@ -280,33 +289,51 @@ class Process:
             self.check(fwd["Source"], self.__hash(fwd["Message"]), fwd["SequenceNumber"])
 
     def check(self, source, hash, sequence_number):
-        for msg in self.MsgSets[(source, sequence_number)]:
-            print(self.echo_counter, self.echos_rec, self.accs_sent)
-            if self.__hash(msg) == hash:
+        # Ho assunto che ci possano essere messaggi contenuti in MsgSets che sono stati inviati da processi bizantini
+        # e che, per qualche motivo, possano avere >= f + 1 riscontri (forse se il bizantino è proprio il mittente
+        # originario, anche se andrebbe controllato in quel caso cosa succede all'algoritmo)
+        # TODO check whether it is possible and what would happen if the sender is byzantine
+        if (source, sequence_number) in self.MsgSets:
+            for msg in self.MsgSets[(source, sequence_number)]:
+                print(self.echo_counter, self.echos_rec, self.echos_sent)
+                print(self.acc_counter, self.accs_rec, self.accs_sent)
+                if self.__hash(msg) == hash:
 
-                # the two ifs are merged inside only one because there is no action taken without one of them
-                if self.echo_counter[("ECHO", source, hash, sequence_number)] >= self.faulty + 1 and ["ECHO", source, sequence_number] not in self.echos_rec:
-                    packet = {"Flag": "ECHO", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
-                    for i in range(len(self.AL)):
-                        self.AL[i].send(packet)
+                    # the two ifs are merged inside only one because there is no action taken without one of them
+                    if self.echo_counter[("ECHO", source, hash, sequence_number)] >= self.faulty + 1 and ["ECHO", source, sequence_number] not in self.echos_sent:
+                        # It inserts the ECHO sent in the variable so that it is not sent again
+                        # It is done before the actual send because sending it to all other nodes is time-consuming,
+                        # so the process receives its own ECHO message before the insertion of the message
+                        self.echos_sent.append(["ECHO", source, sequence_number])
+                        packet = {"Flag": "ECHO", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
+                        for i in range(len(self.AL)):
+                            self.AL[i].send(packet)
 
-                if self.echo_counter[("ECHO", source, hash, sequence_number)] >= len(self.ips) - self.faulty and ("ACC", source, sequence_number) not in self.accs_sent:
-                    print("Echos received: ", self.echos_rec)
-                    print("-----ACC PHASE-----")
-                    packet = {"Flag": "ACC", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
-                    for i in range(len(self.AL)):
-                        self.AL[i].send(packet)
-                    self.accs_sent.append(["ACC", source, sequence_number])
+                    if self.echo_counter[("ECHO", source, hash, sequence_number)] >= len(self.ips) - self.faulty and ["ACC", source, sequence_number] not in self.accs_sent:
+                        print("Echos received: ", self.echos_rec)
+                        print("-----ACC PHASE-----")
+                        # It is done before the actual send because sending it to all other nodes is time-consuming,
+                        # so the process receives its own ACC message before the insertion of the message
+                        self.accs_sent.append(["ACC", source, sequence_number])
+                        packet = {"Flag": "ACC", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
+                        for i in range(len(self.AL)):
+                            self.AL[i].send(packet)
 
-                if len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= self.faulty + 1 and ("ACC", source, sequence_number) not in self.accs_sent:
-                    packet = {"Flag": "ACC", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
-                    for i in range(len(self.AL)):
-                        self.AL[i].send(packet)
-                    self.accs_sent.append(["ACC", source, sequence_number])
+                    # First condition is used in order not to get a KeyError
+                    # Indeed, if the first condition is not satisfied, the other conditions won't be even evaluated
+                    # It is not used before because the check function is called for the first time after receiving an ECHO
+                    # TODO check if the above statement is confirmed even with byzantine nodes
+                    if ("ACC", source, hash, sequence_number) in self.acc_counter and len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= self.faulty + 1 and ["ACC", source, sequence_number] not in self.accs_sent:
+                        # Same as before
+                        self.accs_sent.append(["ACC", source, sequence_number])
+                        packet = {"Flag": "ACC", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
+                        for i in range(len(self.AL)):
+                            self.AL[i].send(packet)
 
-                if len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= len(self.ips) - self.faulty:
-                    print("-----Message Delivered-----")
-                    print("-----<%s,%s,%s>-----", source, msg, sequence_number)
+                    # Same as before
+                    if ("ACC", source, hash, sequence_number) in self.acc_counter and len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= len(self.ips) - self.faulty:
+                        print("-----Message Delivered-----")
+                        print("-----<%s,%s,%s>-----", source, msg, sequence_number)
 
     def first(self, message, flag, sender):
         if flag == "MSG":

@@ -120,7 +120,7 @@ class AuthenticatedLink:
             "Flag": message["Flag"], "Source": message["Source"], "Message": message["Message"],
             "SequenceNumber": message["SequenceNumber"], "HMAC": hmac.new(
                 self.key.get(self.id, "Key not found"),
-                (message["Flag"] + message["Source"] + message["Message"] + message["SequenceNumber"])
+                (message["Flag"] + str(message["Source"]) + message["Message"] + str(message["SequenceNumber"]))
                 .encode("utf-8"), hashlib.sha256,
             ).hexdigest(),
         }
@@ -155,7 +155,7 @@ class AuthenticatedLink:
     def __check_auth(self, message):
         temp_hash = hmac.new(
             self.key.get(self.id, "Key not found"),
-            (message["Flag"] + message["Source"] + message["Message"] + message["SequenceNumber"]).encode("utf-8"),
+            (message["Flag"] + str(message["Source"]) + message["Message"] + str(message["SequenceNumber"])).encode("utf-8"),
             hashlib.sha256,
         ).hexdigest()
         return temp_hash == message["HMAC"]
