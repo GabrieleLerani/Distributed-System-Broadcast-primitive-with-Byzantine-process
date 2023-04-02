@@ -34,6 +34,7 @@ class Process:
         self.sip = 0
         self.sid = 0
         self.L = []
+        self.AL = []
         self.start=0
         self.key_gen=False
         self.keyPair=None
@@ -116,6 +117,13 @@ class Process:
             # setting up links
             self.L[i].build_Link_r()
             self.L[i].build_Link_s()
+        for i in range(0, len(self.ids)):
+            self.AL.append(
+                AuthenticatedLink.AuthenticatedLink(
+                    self.selfid, self.selfip, self.ids[i], self.ips[i], self
+                )
+            )
+            self.AL[i].receiver()
         logging.info("PROCESS:links successfully created")
         # init data structure for processes's links and signed vote messages
         for p in range(1,len(self.ids)+1):
@@ -185,6 +193,16 @@ class Process:
                             self,
                         )
                     )
+                    self.AL.append(
+                        AuthenticatedLink.AuthenticatedLink(
+                            self.selfid,
+                            self.selfip,
+                            self.ids[len(self.ids) - 1],
+                            self.ips[len(self.ips) - 1],
+                            self,
+                        )
+                    )
+                    self.AL[len(self.AL) - 1].receiver()
                     self.L[len(self.L)-1].build_Link_r()
                     self.L[len(self.L)-1].build_Link_s()
                     # init data structure for process's link
@@ -234,7 +252,9 @@ class Process:
                 msg['MSG']=msg_temp
                 msg['FROM']=BROADCASTER_ID
                 for j in range(0,len(self.ids)):
-                    self.L[j].link_send(msg) 
+                    #self.L[j].link_send(msg) 
+                    self.adapter(j,msg,'B') # adapter pattern to remain consistent
+                self.barrier.wait() # to remain consistent
                 logging.info("PROCESS:Message:%s,broadcasted successfully",message)
             case 1:
                 msg={}
@@ -251,6 +271,29 @@ class Process:
                     self.L[j].link_send(message)     
                 logging.info("PROCESS:signed vote messages:%s,broadcasted successfully",message.get('MSG'))
             case _:
+                logging.info("PROCESS:ERROR:Cannot send a message of type undefined")
+        
+    def adapter(self,j,msg,flag,flag_a='NULL',idn='NULL'):
+        match flag:
+            case 'B':
+                self.AL[j].send(msg['MSG'],flag="SEND")
+            case 'R':
+                msg_pack={} 
+                msg_pack['TYPE']=0
+                msg_pack['FLAG']="PROPOSE"
+                msg_pack['MSG']=msg
+                msg_pack['FROM']=BROADCASTER_ID
+
+                if flag_a == "SEND" and idn == 1:
+                    # Add the message if it's not yet received
+                    if self.sid == BROADCASTER_ID:
+                        self.barrier.wait()
+                    else:
+                        self.__update()  # If writer_id == 1 then it is correct, otherwise no
+                # returning to the standard link flow
+                self.L[j].receive(msg)
+
+            case _: 
                 logging.info("PROCESS:ERROR:Cannot send a message of type undefined")
 
     def process_receive(self, msg):

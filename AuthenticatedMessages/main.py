@@ -2,6 +2,7 @@ from threading import Thread
 import logging
 import Process
 import Process_2
+import Process_3
 import sys
 import time
 
@@ -27,7 +28,7 @@ if __name__ == "__main__":
 
             case "3":
                 logging.info("MAIN:STARTING PROTOCOL--> HASH BASED BROADCAST")
-                pass
+                p= Process_3.Process()
 
             case "4":
                 logging.info("MAIN:STARTING PROTOCOL--> ERASURE CODE BASED BROADCAST")

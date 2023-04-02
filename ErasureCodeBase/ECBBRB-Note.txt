@@ -1,0 +1,20 @@
+ERASURE CODE BASE BYZANTINE RELIABLE BROADCAST
+
+-Use auth.links
+-h sequence number of the message
+-s source of the message
+-each message identified by (s,h)
+-MSGSet --> set of messages collected by a process
+-* to denote whatever value
+-each message splitted in N pieces
+-each piece sent to a specific process encoded
+-process that receives a coded element forwards it with an ECHO MESSAGE to others (ENC(ECHO,MSG),ci)
+-process receives an ECHO message decodes it if it has received at least k coded elements.
+-k ≥ n − f
+-process wait for n-f ECHO messages
+-SHA-2/SHA-3 families
+-similar to Shamir
+-m divided in k elements of size L/K,L size of  message
+-input(m1,...,mk)-->encoder-->ouput(c1,...,ck) 
+-each ci has size L/K
+-decoder can decode if it has aty least f+1 uncorrupted coded elements
