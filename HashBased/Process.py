@@ -167,7 +167,7 @@ class Process:
 
     def broadcast(self, message):
         self.update()
-        self.faulty = math.floor(len(self.ids) / 3)
+        self.faulty = math.floor((len(self.ids) - 1) / 3)
         # TODO va aggiunta la creazione dei link
         packet = {"Flag": "MSG", "Source": self.selfid, "Message": message, "SequenceNumber": self.h}
         for i in range(len(self.AL)):
@@ -181,6 +181,8 @@ class Process:
     def receiving_msg(self, message, id):
         # the id is not needed for the check of MSG messages but the function requires it anyway
         if message["Source"] == id and self.first(message, "MSG", id):
+            self.update()
+            self.faulty = math.floor((len(self.ids) - 1) / 3)
             # if the tuple Source,SN is not in MsgSets then you add it with an empty list
             # that will be filled with next messages
             if (message["Source"], message["SequenceNumber"]) not in self.MsgSets:
