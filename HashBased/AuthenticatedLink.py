@@ -139,18 +139,23 @@ class AuthenticatedLink:
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.sock.connect((self.ip, port))
+            while True:
+                try:
+                    self.sock.connect((self.ip, port))
 
-            # mess is a dictionary that contains the original packet plus the HMAC
-            mess = self.__auth(message)
+                    # mess is a dictionary that contains the original packet plus the HMAC
+                    mess = self.__auth(message)
 
-            self.lock.acquire()
-            print(mess, "sent to <", self.ip, self.id, ">")
-            self.lock.release()
+                    self.lock.acquire()
+                    print(mess, "sent to <", self.ip, self.id, ">")
+                    self.lock.release()
 
-            parsed_data = json.dumps(mess)
-            print("#bytes: ", len(parsed_data.encode("utf-8")))
-            self.sock.sendall(bytes(parsed_data, encoding="utf-8"))
+                    parsed_data = json.dumps(mess)
+                    print("#bytes: ", len(parsed_data.encode("utf-8")))
+                    self.sock.sendall(bytes(parsed_data, encoding="utf-8"))
+                    break
+                except ConnectionRefusedError:
+                    continue
 
     # It checks message authenticity comparing the hmac
     def __check_auth(self, message):

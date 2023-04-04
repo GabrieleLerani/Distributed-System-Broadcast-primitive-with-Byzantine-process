@@ -199,7 +199,11 @@ class Process:
             else:
                 self.MsgSets[(message["Source"], message["SequenceNumber"])].append(message["Message"])
 
-            hashed_message = self.__hash(message["Message"])
+            if self.selfid == 1:
+                self.barrier.wait()
+            else:
+                self.update()
+                self.faulty = math.floor((len(self.ids) - 1) / 3)
 
             # UNCOMMENT THIS SECTION TO BE MORE LOYAL TO THE SPECIFICATION
             #if ("ECHO", message["Source"], hashed_message, message["SequenceNumber"]) not in self.echo_counter:
@@ -209,17 +213,13 @@ class Process:
             #else:
                 # otherwise it increases its value
             #    self.echo_counter[("ECHO", message["Source"], hashed_message, message["SequenceNumber"])] += 1
-            if self.selfid == 1:
-                self.barrier.wait()
-            else:
-                self.update()
-                self.faulty = math.floor((len(self.ids) - 1) / 3)
 
             if ["ECHO", message["Source"], message["SequenceNumber"]] not in self.echos_sent:
                 # It inserts the ECHO sent in the variable so that it is not sent again
                 # It is done before the actual send because sending it to all other nodes is time-consuming,
                 # so the process receives its own ECHO message before the insertion of the message
                 self.echos_sent.append(["ECHO", message["Source"], message["SequenceNumber"]])
+                hashed_message = self.__hash(message["Message"])
                 packet = {"Flag": "ECHO", "Source": message["Source"], "Message": hashed_message, "SequenceNumber": message["SequenceNumber"]}
                 for i in range(len(self.AL)):
                     self.AL[i].send(packet)
@@ -253,6 +253,7 @@ class Process:
                 self.acc_counter[("ACC", acc["Source"], acc["Message"], acc["SequenceNumber"])].append(id)
 
             if len(self.acc_counter[("ACC", acc["Source"], acc["Message"], acc["SequenceNumber"])]) == self.faulty + 1:
+                # TODO check because it gives error
                 msgs = self.MsgSets[(acc["Source"], acc["SequenceNumber"])]
                 thereis = False
                 for msg in msgs:
