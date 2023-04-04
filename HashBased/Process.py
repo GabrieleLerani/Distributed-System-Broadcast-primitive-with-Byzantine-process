@@ -8,7 +8,7 @@ import struct
 import logging
 import math
 
-SERVER_ID = "192.168.1.41"
+SERVER_ID = "192.168.1.26"
 SERVER_PORT = 5000
 
 RCV_BUFFER_SIZE = 2048
@@ -24,7 +24,7 @@ class Process:
         self.AL = []
         # messages received
         self.msg =[]
-        self.MsgSets = {}   # TODO if the not commented part inside receiving_msg does not work you must make MsgSets a list of MessageSet
+        self.MsgSets = {}
         # both the variable echos are lists because we need only the tracking of previous echos,
         # not the association with other values
         # in order not to count the same echo twice
@@ -181,8 +181,6 @@ class Process:
     def receiving_msg(self, message, id):
         # the id is not needed for the check of MSG messages but the function requires it anyway
         if message["Source"] == id and self.first(message, "MSG", id):
-            self.update()
-            self.faulty = math.floor((len(self.ids) - 1) / 3)
             # if the tuple Source,SN is not in MsgSets then you add it with an empty list
             # that will be filled with next messages
             if (message["Source"], message["SequenceNumber"]) not in self.MsgSets:
@@ -201,8 +199,11 @@ class Process:
             #else:
                 # otherwise it increases its value
             #    self.echo_counter[("ECHO", message["Source"], hashed_message, message["SequenceNumber"])] += 1
-
-            self.barrier.wait()
+            if self.id == 1:
+                self.barrier.wait()
+            else:
+                self.update()
+                self.faulty = math.floor((len(self.ids) - 1) / 3)
 
             if ["ECHO", message["Source"], message["SequenceNumber"]] not in self.echos_sent:
                 # It inserts the ECHO sent in the variable so that it is not sent again
