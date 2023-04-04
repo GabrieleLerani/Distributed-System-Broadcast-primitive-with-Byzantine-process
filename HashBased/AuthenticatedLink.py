@@ -149,6 +149,7 @@ class AuthenticatedLink:
             self.lock.release()
 
             parsed_data = json.dumps(mess)
+            print("#bytes: ", len(parsed_data.encode("utf-8")))
             self.sock.sendall(bytes(parsed_data, encoding="utf-8"))
 
     # It checks message authenticity comparing the hmac

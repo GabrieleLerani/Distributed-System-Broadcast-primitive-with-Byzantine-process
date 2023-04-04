@@ -8,7 +8,7 @@ import struct
 import logging
 import math
 
-SERVER_ID = "192.168.1.26"
+SERVER_ID = "192.168.1.41"
 SERVER_PORT = 5000
 
 RCV_BUFFER_SIZE = 2048
@@ -23,7 +23,7 @@ class Process:
         self.ids = []
         self.AL = []
         # messages received
-        self.msg =[]
+        self.msg = []
         self.MsgSets = {}
         # both the variable echos are lists because we need only the tracking of previous echos,
         # not the association with other values
@@ -168,7 +168,17 @@ class Process:
     def broadcast(self, message):
         self.update()
         self.faulty = math.floor((len(self.ids) - 1) / 3)
-        # TODO va aggiunta la creazione dei link
+        for j in range(len(self.AL), len(self.ids)):
+            self.AL.append(
+                AuthenticatedLink.AuthenticatedLink(
+                    self.selfid,
+                    self.selfip,
+                    self.ids[j],
+                    self.ips[j],
+                    self,
+                )
+            )
+            self.AL[j].receiver()
         packet = {"Flag": "MSG", "Source": self.selfid, "Message": message, "SequenceNumber": self.h}
         for i in range(len(self.AL)):
             self.AL[i].send(packet)
@@ -199,7 +209,7 @@ class Process:
             #else:
                 # otherwise it increases its value
             #    self.echo_counter[("ECHO", message["Source"], hashed_message, message["SequenceNumber"])] += 1
-            if self.id == 1:
+            if self.selfid == 1:
                 self.barrier.wait()
             else:
                 self.update()
@@ -312,7 +322,7 @@ class Process:
                         for i in range(len(self.AL)):
                             self.AL[i].send(packet)
 
-                    if self.echo_counter[("ECHO", source, hash, sequence_number)] >= len(self.ips) - self.faulty and ["ACC", source, sequence_number] not in self.accs_sent:
+                    elif self.echo_counter[("ECHO", source, hash, sequence_number)] >= len(self.ips) - self.faulty and ["ACC", source, sequence_number] not in self.accs_sent:
                         print("Echos received: ", self.echos_rec)
                         print("-----ACC PHASE-----")
                         # It is done before the actual send because sending it to all other nodes is time-consuming,
@@ -326,7 +336,7 @@ class Process:
                     # Indeed, if the first condition is not satisfied, the other conditions won't be even evaluated
                     # It is not used before because the check function is called for the first time after receiving an ECHO
                     # TODO check if the above statement is confirmed even with byzantine nodes
-                    if ("ACC", source, hash, sequence_number) in self.acc_counter and len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= self.faulty + 1 and ["ACC", source, sequence_number] not in self.accs_sent:
+                    elif ("ACC", source, hash, sequence_number) in self.acc_counter and len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= self.faulty + 1 and ["ACC", source, sequence_number] not in self.accs_sent:
                         # Same as before
                         self.accs_sent.append(["ACC", source, sequence_number])
                         packet = {"Flag": "ACC", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
@@ -334,9 +344,9 @@ class Process:
                             self.AL[i].send(packet)
 
                     # Same as before
-                    if ("ACC", source, hash, sequence_number) in self.acc_counter and len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= len(self.ips) - self.faulty:
+                    elif ("ACC", source, hash, sequence_number) in self.acc_counter and len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= len(self.ips) - self.faulty:
                         print("-----Message Delivered-----")
-                        print("-----<%s,%s,%s>-----", source, msg, sequence_number)
+                        print("-----<", source, msg, sequence_number, ">-----")
 
     def first(self, message, flag, sender):
         if flag == "MSG":
