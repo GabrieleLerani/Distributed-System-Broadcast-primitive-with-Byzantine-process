@@ -9,38 +9,39 @@ import logging
 from Crypto.PublicKey import RSA
 from sys import platform
 from hashlib import sha512
+import AuthenticatedLink
 
 SERVER_ID = "localhost"
 SERVER_PORT = 5000
 
-KDS_IP="localhost"
-KDS_PORT=8080
+KDS_IP = "localhost"
+KDS_PORT = 8080
 
 RCV_BUFFER_SIZE = 1024
 BREAK_TIME = 0.1
 
-BROADCASTER_ID=1
+BROADCASTER_ID = 1
 
-PLACEHOLDER="vote_msg"
+PLACEHOLDER = "vote_msg"
 
 
 class Process:
     def __init__(self):
         self.ids = []
         self.ips = []
-        self.signed_vote_messages_container=[]
-        self.signed_vote_messages_container.append(0) # to avoid index out of range problems or no intialize structure errors
-        self.checked_indexes=[]
-        self.sip = 0
-        self.sid = 0
+        self.signed_vote_messages_container = []
+        # self.signed_vote_messages_container.append(0) # to avoid index out of range problems or no intialize structure errors
+        self.checked_indexes = []
+        self.selfip = 0
+        self.selfid = 0
         self.L = []
         self.AL = []
-        self.start=0
-        self.key_gen=False
-        self.keyPair=None
-        self.public_keys={}
+        self.start = 0
+        self.key_gen = False
+        self.keyPair = None
+        self.public_keys = {}
         self.delivered = False
-        self.f = math.floor(len(self.ids) / 3) # f<N/3 condition to protocol correctness
+        self.f = math.floor(len(self.ids) / 3)   # f<N/3 condition to protocol correctness
         
     def connection_to_server(self):
         # It starts a connection to the server to obtain a port number
@@ -104,14 +105,14 @@ class Process:
             hostname = socket.gethostname()
 
         IPAddr=socket.gethostbyname(hostname)
-        self.sip = IPAddr
-        self.sid = self.ids[self.ips.index(self.sip)]
+        self.selfip = IPAddr
+        self.selfid = self.ids[self.ips.index(self.selfip)]
         # creating links 
         for i in range(0, len(self.ids)):
             # init links
             self.L.append(
                 Link.Link(
-                    self.sid, self.sip, self.ids[i], self.ips[i],self,
+                    self.selfid, self.selfip, self.ids[i], self.ips[i],self,
                 )
             )
             # setting up links
@@ -141,7 +142,7 @@ class Process:
                 final_msg={}
                 final_msg_dict=self.count(i)
                 final_msg_dict['TYPE']=2
-                final_msg_dict['FROM']=str(self.sid)
+                final_msg_dict['FROM']=str(self.selfid)
                 if final_msg_dict.get('GO'):
                     self.broadcast(final_msg_dict)
                     self.deliver(final_msg_dict['MSG'])
@@ -186,8 +187,8 @@ class Process:
                     self.ids.append(int(id_from_queue))
                     self.L.append(
                         Link.Link(
-                            self.sid,
-                            self.sip,
+                            self.selfid,
+                            self.selfip,
                             self.ids[len(self.ids) - 1],
                             self.ips[len(self.ips) - 1],
                             self,
@@ -232,61 +233,61 @@ class Process:
  
     def broadcast(self, message):
         # broadcasting messages to all processes
-        self.__update() # updating receiving side links
+        self.__update()   # updating receiving side links
         # TODO adding signature here if all the messages have to be signed
         # marshal message
-        if self.start==0 and self.sid==BROADCASTER_ID:
-            mess={}
-            mess['TYPE']=0
-            msg_temp=message
-            message=mess
-            self.start=1
+        if self.start == 0 and self.selfid == BROADCASTER_ID:
+            mess = {}
+            mess['TYPE'] = 0
+            msg_temp = message
+            message = mess
+            self.start = 1
             logging.info("PROCESS:marshalling first broadcast message fro the broadcaster")
 
         match message.get('TYPE'):
         # marshal message
             case 0:
-                msg={} 
-                msg['TYPE']=0
-                msg['FLAG']="PROPOSE"
-                msg['MSG']=msg_temp
-                msg['FROM']=BROADCASTER_ID
-                for j in range(0,len(self.ids)):
+                msg = {}
+                msg['TYPE'] = 0
+                msg['FLAG'] = "PROPOSE"
+                msg['MSG'] = msg_temp
+                msg['FROM'] = BROADCASTER_ID
+                for j in range(0, len(self.ids)):
                     #self.L[j].link_send(msg) 
-                    self.adapter(j,msg,'B') # adapter pattern to remain consistent
+                    self.adapter(j, msg, 'B')   # adapter pattern to remain consistent
                 self.barrier.wait() # to remain consistent
-                logging.info("PROCESS:Message:%s,broadcasted successfully",message)
+                logging.info("PROCESS:Message:%s,broadcasted successfully", message)
             case 1:
-                msg={}
-                msg['FLAG']="VOTE"
-                msg['MSG']=message.get('MSG')
-                msg['SIGN']=self.make_signature(message.get('MSG'))
-                msg['TYPE']=1
-                msg['FROM']=self.sid
-                for j in range(0,len(self.ids)):
+                msg = {}
+                msg['FLAG'] = "VOTE"
+                msg['MSG'] = message.get('MSG')
+                msg['SIGN'] = self.make_signature(message.get('MSG'))
+                msg['TYPE'] = 1
+                msg['FROM'] = self.selfid
+                for j in range(0, len(self.ids)):
                     self.L[j].link_send(msg)   
-                logging.info("PROCESS:Message:%s,re-broadcasted successfully",message)
+                logging.info("PROCESS:Message:%s,re-broadcasted successfully", message)
             case 2:
-                for j in range(0,len(self.ids)):
+                for j in range(0, len(self.ids)):
                     self.L[j].link_send(message)     
-                logging.info("PROCESS:signed vote messages:%s,broadcasted successfully",message.get('MSG'))
+                logging.info("PROCESS:signed vote messages:%s,broadcasted successfully", message.get('MSG'))
             case _:
                 logging.info("PROCESS:ERROR:Cannot send a message of type undefined")
         
-    def adapter(self,j,msg,flag,flag_a='NULL',idn='NULL'):
+    def adapter(self, j, msg, flag, flag_a='NULL', idn='NULL'):
         match flag:
             case 'B':
-                self.AL[j].send(msg['MSG'],flag="SEND")
+                self.AL[j].send(msg['MSG'], flag="SEND")
             case 'R':
-                msg_pack={} 
-                msg_pack['TYPE']=0
-                msg_pack['FLAG']="PROPOSE"
-                msg_pack['MSG']=msg
-                msg_pack['FROM']=BROADCASTER_ID
+                msg_pack = {}
+                msg_pack['TYPE'] = 0
+                msg_pack['FLAG'] = "PROPOSE"
+                msg_pack['MSG'] = msg
+                msg_pack['FROM'] = BROADCASTER_ID
 
                 if flag_a == "SEND" and idn == 1:
                     # Add the message if it's not yet received
-                    if self.sid == BROADCASTER_ID:
+                    if self.selfid == BROADCASTER_ID:
                         self.barrier.wait()
                     else:
                         self.__update()  # If writer_id == 1 then it is correct, otherwise no
@@ -303,18 +304,18 @@ class Process:
                 logging.info("PROCESS:Received a message of type 0")
 
                 if msg.get('FROM') == BROADCASTER_ID and msg.get('FLAG') == "PROPOSE":
-                    msg['TYPE']=1
+                    msg['TYPE'] = 1
                     self.broadcast(msg)
             case 1:
                 logging.info("PROCESS:Received a message of type 1")
 
-                if msg.get('FLAG') == "VOTE" and self.check_signature(msg.get('MSG'),msg.get('SIGN'),msg.get('FROM')): 
-                        self.signed_vote_messages_container[self.sid][str(msg.get('FROM'))]['MSG']=msg.get('MSG')
-                        self.signed_vote_messages_container[self.sid][str(msg.get('FROM'))]['SIGN']=msg.get('SIGN')
+                if msg.get('FLAG') == "VOTE" and self.check_signature(msg.get('MSG'), msg.get('SIGN'), msg.get('FROM')):
+                        self.signed_vote_messages_container[self.selfid][str(msg.get('FROM'))]['MSG'] = msg.get('MSG')
+                        self.signed_vote_messages_container[self.selfid][str(msg.get('FROM'))]['SIGN'] = msg.get('SIGN')
                 else:
 
-                    if msg.get('FLAG')!="VOTE":
-                        logging.info("PROCESS:Wrong flag received %s",msg.get('FLAG'))
+                    if msg.get('FLAG') != "VOTE":
+                        logging.info("PROCESS:Wrong flag received %s", msg.get('FLAG'))
 
                     else:
                         logging.info("PROCESS:Authentication error")
@@ -322,9 +323,9 @@ class Process:
 
             case 2:
                 logging.info("PROCESS:Received a message of type 2")
-                counter=0
+                counter = 0
 
-                if delivered==False:
+                if not delivered:
                     for id in list(msg['keys'].values()):
                         if self.check_signature(msg['keys'][str(id)+PLACEHOLDER]['MSG'],msg['keys'][str(id)+PLACEHOLDER]['SIGN']):
                             counter=counter+1
@@ -352,7 +353,7 @@ class Process:
         if not self.key_gen:
             logging.info("PROCESS:Calling KDS to get key pair")
             self.key_gen=True
-            self.keyPair=self.connection_to_KDS(self.sid, 1)
+            self.keyPair=self.connection_to_KDS(self.selfid, 1)
         else:
             logging.info("PROCESS:Key already generated")
         # sign
