@@ -32,8 +32,8 @@ class Process:
         self.signed_vote_messages_container = []
         # self.signed_vote_messages_container.append(0) # to avoid index out of range problems or no intialize structure errors
         self.checked_indexes = []
-        self.selfip = 0
-        self.selfid = 0
+        self.sip = 0
+        self.sid = 0
         self.L = []
         self.AL = []
         self.start = 0
@@ -43,7 +43,7 @@ class Process:
         self.delivered = False
         self.f = math.floor(len(self.ids) / 3)   # f<N/3 condition to protocol correctness
         
-    def connection_to_server(self):
+    def connection_to_server(self):# TODO USING NEW VERSION OF LINKS
         # It starts a connection to the server to obtain a port number
         print("-----CONNECTING TO SERVER...-----")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -95,7 +95,7 @@ class Process:
         t = Thread(target=self.listening_thread)
         t.start()
 
-    def creation_links(self):
+    def creation_links(self):# TODO USING NEW VERSION OF LINKS
         # binding my informations
         
         # checking os
@@ -105,14 +105,14 @@ class Process:
             hostname = socket.gethostname()
 
         IPAddr=socket.gethostbyname(hostname)
-        self.selfip = IPAddr
-        self.selfid = self.ids[self.ips.index(self.selfip)]
+        self.sip = IPAddr
+        self.sid = self.ids[self.ips.index(self.sip)]
         # creating links 
         for i in range(0, len(self.ids)):
             # init links
             self.L.append(
                 Link.Link(
-                    self.selfid, self.selfip, self.ids[i], self.ips[i],self,
+                    self.sid, self.sip, self.ids[i], self.ips[i],self,
                 )
             )
             # setting up links
@@ -121,7 +121,7 @@ class Process:
         for i in range(0, len(self.ids)):
             self.AL.append(
                 AuthenticatedLink.AuthenticatedLink(
-                    self.selfid, self.selfip, self.ids[i], self.ips[i], self
+                    self.sid, self.sip, self.ids[i], self.ips[i], self
                 )
             )
             self.AL[i].receiver()
@@ -133,7 +133,7 @@ class Process:
                 self.signed_vote_messages_container[p][str(id)]={}
         logging.info("PROCESS:data structures for processes successfully created")
             
-    def listening_thread(self):
+    def listening_thread(self):# TODO USING NEW VERSION OF LINKS
         # checking for condition assuming only one broadcast round
         i=1
         while True:
@@ -142,9 +142,14 @@ class Process:
                 final_msg={}
                 final_msg_dict=self.count(i)
                 final_msg_dict['TYPE']=2
-                final_msg_dict['FROM']=str(self.selfid)
+                final_msg_dict['FROM']=str(self.sid)
                 if final_msg_dict.get('GO'):
-                    self.broadcast(final_msg_dict)
+                    #self.broadcast(final_msg_dict)
+                    for j in range(0, len(self.ids)):
+                        self.L[j].link_send(final_msg_dict)     
+                        logging.info("PROCESS:signed vote messages:%s,broadcasted successfully", message.get('MSG'))
+
+
                     self.deliver(final_msg_dict['MSG'])
                     logging.info("PROCESS:-----ENDING PROTOCOL--> AUTHENTICATED MESSAGES BROADCAST-----")
                     logging.info("PROCESS:-----SUCCESSFULL EXIT-----")
@@ -156,18 +161,18 @@ class Process:
             if i== len(self.ids):
                 i=1
   
-    def __update(self):
+    def __update(self):# TODO USING NEW VERSION OF LINKS
         with pika.BlockingConnection(
             pika.ConnectionParameters(host=SERVER_ID)
         ) as connection:
             channel = connection.channel()
 
-            response = channel.queue_declare(queue=str(self.selfid))
+            response = channel.queue_declare(queue=str(self.sid))
             # Get the queue length (number of not consumed messages)
             num = response.method.message_count
 
             logging.info(
-                "PROCESS: %d,%s --- My queue length: %d", self.selfid, self.selfip, num
+                "PROCESS: %d,%s --- My queue length: %d", self.sid, self.sip, num
             )
 
             if num == 0:
@@ -187,8 +192,8 @@ class Process:
                     self.ids.append(int(id_from_queue))
                     self.L.append(
                         Link.Link(
-                            self.selfid,
-                            self.selfip,
+                            self.sid,
+                            self.sip,
                             self.ids[len(self.ids) - 1],
                             self.ips[len(self.ips) - 1],
                             self,
@@ -196,8 +201,8 @@ class Process:
                     )
                     self.AL.append(
                         AuthenticatedLink.AuthenticatedLink(
-                            self.selfid,
-                            self.selfip,
+                            self.sid,
+                            self.sip,
                             self.ids[len(self.ids) - 1],
                             self.ips[len(self.ips) - 1],
                             self,
@@ -227,54 +232,38 @@ class Process:
                     channel.close()
 
             channel.basic_consume(
-                queue=str(self.selfid), on_message_callback=callback, auto_ack=True
+                queue=str(self.sid), on_message_callback=callback, auto_ack=True
             )
             channel.start_consuming()
  
-    def broadcast(self, message):
+    def broadcast(self, message):# TODO USING NEW VERSION OF LINKS
         # broadcasting messages to all processes
         self.__update()   # updating receiving side links
-        # TODO adding signature here if all the messages have to be signed
+        
         # marshal message
-        if self.start == 0 and self.selfid == BROADCASTER_ID:
+        if self.start == 0 and self.sid == BROADCASTER_ID:
             mess = {}
             mess['TYPE'] = 0
             msg_temp = message
             message = mess
             self.start = 1
-            logging.info("PROCESS:marshalling first broadcast message fro the broadcaster")
+            logging.info("PROCESS:marshalling first broadcast message for the broadcaster")
 
-        match message.get('TYPE'):
-        # marshal message
-            case 0:
+        if message.get('TYPE')==0:
                 msg = {}
                 msg['TYPE'] = 0
                 msg['FLAG'] = "PROPOSE"
                 msg['MSG'] = msg_temp
                 msg['FROM'] = BROADCASTER_ID
+
                 for j in range(0, len(self.ids)):
-                    #self.L[j].link_send(msg) 
                     self.adapter(j, msg, 'B')   # adapter pattern to remain consistent
                 self.barrier.wait() # to remain consistent
                 logging.info("PROCESS:Message:%s,broadcasted successfully", message)
-            case 1:
-                msg = {}
-                msg['FLAG'] = "VOTE"
-                msg['MSG'] = message.get('MSG')
-                msg['SIGN'] = self.make_signature(message.get('MSG'))
-                msg['TYPE'] = 1
-                msg['FROM'] = self.selfid
-                for j in range(0, len(self.ids)):
-                    self.L[j].link_send(msg)   
-                logging.info("PROCESS:Message:%s,re-broadcasted successfully", message)
-            case 2:
-                for j in range(0, len(self.ids)):
-                    self.L[j].link_send(message)     
-                logging.info("PROCESS:signed vote messages:%s,broadcasted successfully", message.get('MSG'))
-            case _:
+        else:
                 logging.info("PROCESS:ERROR:Cannot send a message of type undefined")
         
-    def adapter(self, j, msg, flag, flag_a='NULL', idn='NULL'):
+    def adapter(self, j, msg, flag, flag_a='NULL', idn='NULL'):# TODO USING NEW VERSION OF LINKS
         match flag:
             case 'B':
                 self.AL[j].send(msg['MSG'], flag="SEND")
@@ -287,7 +276,7 @@ class Process:
 
                 if flag_a == "SEND" and idn == 1:
                     # Add the message if it's not yet received
-                    if self.selfid == BROADCASTER_ID:
+                    if self.sid == BROADCASTER_ID:
                         self.barrier.wait()
                     else:
                         self.__update()  # If writer_id == 1 then it is correct, otherwise no
@@ -297,40 +286,59 @@ class Process:
             case _: 
                 logging.info("PROCESS:ERROR:Cannot send a message of type undefined")
 
-    def process_receive(self, msg):
+    def process_receive(self, msg):# TODO USING NEW VERSION OF LINKS
         # receive messages from the underlying pppl
         match msg.get('TYPE'):
             case 0:
                 logging.info("PROCESS:Received a message of type 0")
 
                 if msg.get('FROM') == BROADCASTER_ID and msg.get('FLAG') == "PROPOSE":
+                    #self.broadcast(msg)
+                    msg = {}
+                    msg['FLAG'] = "VOTE"
+                    msg['MSG'] = msg.get('MSG')
+                    msg['SIGN'] = self.make_signature(msg.get('FLAG')+msg.get('MSG'))
                     msg['TYPE'] = 1
-                    self.broadcast(msg)
-            case 1:
-                logging.info("PROCESS:Received a message of type 1")
+                    msg['FROM'] = self.sid
 
-                if msg.get('FLAG') == "VOTE" and self.check_signature(msg.get('MSG'), msg.get('SIGN'), msg.get('FROM')):
-                        self.signed_vote_messages_container[self.selfid][str(msg.get('FROM'))]['MSG'] = msg.get('MSG')
-                        self.signed_vote_messages_container[self.selfid][str(msg.get('FROM'))]['SIGN'] = msg.get('SIGN')
+                    # TODO USING NEW VERSION OF LINKS
+
+                    for j in range(0, len(self.ids)):
+                        self.L[j].link_send(msg)   
+                    logging.info("PROCESS:Vote message:%s,broadcasted successfully", msg)
+
                 else:
-
                     if msg.get('FLAG') != "VOTE":
                         logging.info("PROCESS:Wrong flag received %s", msg.get('FLAG'))
 
                     else:
                         logging.info("PROCESS:Authentication error")
 
+            case 1:
+                logging.info("PROCESS:Received a message of type 1")
+
+                if msg.get('FLAG') == "VOTE" and self.check_signature(msg.get('FLAG')+msg.get('MSG'), msg.get('SIGN'), msg.get('FROM')):
+                        self.signed_vote_messages_container[self.sid][str(msg.get('FROM'))][str(msg.get('MSG'))] = msg.get('MSG')
+                        self.signed_vote_messages_container[self.sid][str(msg.get('FROM'))][str(msg.get('MSG'))+'SIGN'] = msg.get('SIGN')
+                else:
+                    if msg.get('FLAG') != "VOTE":
+                        logging.info("PROCESS:Wrong flag received %s", msg.get('FLAG'))
+                    else:
+                        logging.info("PROCESS:Authentication error")
 
             case 2:
                 logging.info("PROCESS:Received a message of type 2")
                 counter = 0
 
                 if not delivered:
+                    
                     for id in list(msg['keys'].values()):
                         if self.check_signature(msg['keys'][str(id)+PLACEHOLDER]['MSG'],msg['keys'][str(id)+PLACEHOLDER]['SIGN']):
                             counter=counter+1
                         if counter==len(self.ids)-f:
-                            self.signed_vote_messages_container[msg.get('FROM')]=msg
+                            self.deliver(msg['keys'][str(id)+PLACEHOLDER]['MSG'])
+                else:
+                    logging.info("PROCESS:Already delivered not re-broadcast all the signed vote messages")
             case _:
                 logging.info("PROCESS:ERROR:Received a message of type undefined")
   
@@ -353,7 +361,7 @@ class Process:
         if not self.key_gen:
             logging.info("PROCESS:Calling KDS to get key pair")
             self.key_gen=True
-            self.keyPair=self.connection_to_KDS(self.selfid, 1)
+            self.keyPair=self.connection_to_KDS(self.sid, 1)
         else:
             logging.info("PROCESS:Key already generated")
         # sign
@@ -363,7 +371,7 @@ class Process:
         logging.info("PROCESS:Signature:<%s>", hex(signature))
         return hex(signature)
     
-    def connection_to_KDS(self,idn,typ):
+    def connection_to_KDS(self,idn,typ):# TODO USING NEW VERSION OF LINKS
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 sock.connect((KDS_IP, KDS_PORT))
@@ -381,27 +389,35 @@ class Process:
     def count(self,i):
         # counting if a safe vote message sats the condition
         checked_msgs=[]
-        for id in range(1,len(self.signed_vote_messages_container[i])+1):
-            current_dict.clear() # cleaning the dictionary
-            current_dict={} # container
-            current_dict['keys']={} # container into the current_dict container that contains keys_id of the processes that actually signed this current msg to be delivered
-            counter=0
-            current_dict['GO'] = False # barrier flag to go ahead or not
-            current_msg=self.signed_vote_messages_container[i][str(id)]['MSG']
-            if current_msg not in checked_msgs:
-                current_dict['MSG']=current_msg
-                for j in range(1,len(self.signed_vote_messages_container[i])+1): # comparing with the others to count
-                    other_msg=self.signed_vote_messages_container[i][str(j)]['MSG']
-                    if current_msg == other_msg:
-                        current_dict['keys'][str(j)]=str(j)
-                        current_dict['keys'][str(j)+PLACEHOLDER]={} # new dict for each id to know the pair <msg,signed_msg>; the +vote_msg string to avoid overwriting the prec line
-                        current_dict['keys'][str(j)+PLACEHOLDER]['MSG']=other_msg
-                        current_dict['keys'][str(j)+PLACEHOLDER]['SIGN']=self.signed_vote_messages_container[i][str(j)]['SIGN']
-                        counter=counter+1
-                    if counter==(len(self.ids)-self.f):
-                        current_dict['GO']=True
-                        return current_dict
-                checked_msgs.append(current_msg)
+        for id in range(1,len(self.signed_vote_messages_container[i])+1): # checking for all processes id that sent to i a message
+                counter=0
+                current_dict.clear() # cleaning the dictionary
+                current_dict={} # container
+                current_dict['keys']={} # container into the current_dict container that contains keys_id of the processes that actually signed this current msg to be delivered
+                counter=0
+                current_dict['GO'] = False # barrier flag to go ahead or not
+                current_values=self.signed_vote_messages_container[i][str(id)].values() # listing messages received from id
+                for current_msg in current_values:# choosing one message received from id
+                    counter=1
+                    current_dict['keys'][str(id)]=str(id)
+                    current_dict['keys'][str(id)+PLACEHOLDER]={} # new dict for each id to know the pair <msg,signed_msg>; the +vote_msg string to avoid overwriting the prec line
+                    current_dict['keys'][str(id)+PLACEHOLDER]['MSG']=current_msg
+                    current_dict['keys'][str(id)+PLACEHOLDER]['SIGN']=self.signed_vote_messages_container[i][str(id)][current_msg+'SIGN']
+                    if current_msg not in checked_msgs:
+                        for id2 in range(1,len(self.signed_vote_messages_container[i])+1):# choosing another process different from id 
+                            if id2 !=id:
+                                current_values2=self.signed_vote_messages_container[i][str(id2)].values()
+                                for other_msg in current_values2:# checking one message between those that process id2 sent to i
+                                    if current_msg == other_msg:
+                                        current_dict['keys'][str(id2)]=str(id2)
+                                        current_dict['keys'][str(id2)+PLACEHOLDER]={} # new dict for each id to know the pair <msg,signed_msg>; the +vote_msg string to avoid overwriting the prec line
+                                        current_dict['keys'][str(id2)+PLACEHOLDER]['MSG']=other_msg
+                                        current_dict['keys'][str(id2)+PLACEHOLDER]['SIGN']=self.signed_vote_messages_container[i][str(id2)][other_msg+'SIGN']
+                                        counter=counter+1
+                                    if counter==(len(self.ids)-self.f):
+                                        current_dict['GO']=True
+                                        return current_dict
+                        checked_msgs.append(current_msg)
         return current_dict
    
     def deliver(self,message):
