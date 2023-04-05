@@ -10,6 +10,12 @@ import json
 import struct
 import logging
 import rs
+from binascii import hexlify
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+from Crypto.Protocol.SecretSharing import Shamir
+from binascii import unhexlify
+from base64 import b64decode,b64encode
 
 SERVER_ID = "192.168.1.40"
 SERVER_PORT = 5000
@@ -22,8 +28,6 @@ BROADCASTER_ID=1
 N=10
 K=5
 
-
-KEY=""
 
 
 class Process:
@@ -52,7 +56,7 @@ class Process:
         self.RECEIVEDFWD={}
         self.faulty = math.floor(len(self.ids) / 3) # f<N/3 condition to protocol correctness
 
-    def connection_to_server(self):
+    def connection_to_server(self):# TODO new verion of links
         # It starts a connection to the server to obtain a port number
         print("-----CONNECTING TO SERVER...-----")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -102,7 +106,7 @@ class Process:
         print("-----GATHERED ALL THE PEERS IPS FROM THE BOOTSTRAP SERVER-----")
         print("-----STARTING SENDING OR RECEIVING MESSAGES-----")
 
-    def creation_links(self):
+    def creation_links(self):# TODO new verion of links
         hostname = socket.gethostname()
         IPAddr = socket.gethostbyname(hostname)
         self.selfip = IPAddr
@@ -116,7 +120,7 @@ class Process:
             )
             self.AL[i].receiver()
 
-    def __update(self):
+    def __update(self):# TODO new verion of links
         with pika.BlockingConnection(
             pika.ConnectionParameters(host=SERVER_ID)
         ) as connection:
@@ -165,89 +169,55 @@ class Process:
             )
             channel.start_consuming()
     
-    def broadcast(self, message,s=self.sid,H='#',c='#',h=self.h): 
+    def broadcast(self, message): # TODO new verion of links
         self.__update() # updating current view of the active processes 
 
         if not self.start:
+            self.start=True
+            #self.h=self.h+1 # incrementing sequence number
+            self.h=self.sid
+            h=self.h
             msg_temp=message
+            message={}
             message['FLAG']='MSG'
 
-        match message['FLAG']:
+        if message['FLAG']=='MSG':
+            message['MSG']=msg_temp
+            message['FROM']=str(self.sid)
+            message['S']=str(self.sid)
+            self.encrypt(msg_temp, self.sid, self.h) # creating coded elements
 
-            case 'MSG':
-                if not self.start:
-                    self.start=True
-                    #self.h=self.h+1 # incrementing sequence number
-                    self.h=self.sid
-                    h=self.h
-                message['FROM']=str(self.sid)
-                message['S']=str(self.sid)
-                self.encrypt(msg_temp, self.sid, self.h) # creating coded elements
-                for i in range(len(self.ids)):
-                    self.AL[i].send(message,self.HASH[str(msg_temp)],self.CODESET[str(s)+str(self.HASH[str(msg_temp)])+str(h)][i],h)
-                    if 'MSG'+str(message['S'])+str(h) not in self.SENTMSG.keys():
-                        self.SENTMSG['MSG'+str(message['S'])+str(h)]=[]
-                    self.SENTMSG['MSG'+str(message['S'])+str(h)].append(str(i+1))
-                self.barrier.wait()
-            case 'ECHO':
-                #self.h=self.h+1 # incrementing sequence number
-                self.h=self.sid
-                message['FROM']=str(self.sid)
-                message['S']=str(s)
-                for i in range(len(self.ids)):
-                    self.AL[i].send(message,H,c,h)
-                    if 'ECHO'+str(message['S'])+str(h) not in self.SENTECHO.keys():
-                        self.SENTECHO['ECHO'+str(message['S'])+str(h)]=[]
-                    self.SENTECHO['ECHO'+str(message['S'])+str(h)].append(str(i+1))
-                self.barrier.wait()
-            case 'REQ':
-                # self.h=self.h+1 # incrementing sequence number
-                self.h=self.sid
-                message['FROM']=str(self.sid)
-                message['S']=str(s)
-                for j in range(0,len(self.ids)):
-                    if str('REQ')+str(s)+str(H)+str(h) not in self.SENTREQ.keys():
-                        self.SENTREQ[str('REQ')+str(s)+str(H)+str(h)]=[]
-                    if str(j) not in self.SENTREQ[str('REQ')+str(s)+str(H)+str(h)].values():
-                        self.AL[j].send(message,H,h)
-                        self.SENTREQ['REQ'+str(message['S'])+str(H)+str(h)].append(str(j+1))     
-            case _:
-                logging.info("PROCESS:ERROR: impossible to send a message with flag unknown")
+            for i in range(len(self.ids)):
+                self.AL[i].send(message,self.HASH[str(msg_temp)],self.CODESET[str(s)+str(self.HASH[str(msg_temp)])+str(h)][i],h)
+                if 'MSG'+str(message['S'])+str(h) not in self.SENTMSG.keys():
+                    self.SENTMSG['MSG'+str(message['S'])+str(h)]=[]
+                self.SENTMSG['MSG'+str(message['S'])+str(h)].append(str(i+1))
+            self.barrier.wait()    
+        else:
+            logging.info("PROCESS:ERROR: impossible to send a message with flag unknown")
 
     def encrypt(self,msg,s,h):
         
-        
-        from binascii import hexlify
-        from Crypto.Cipher import AES
-        from Crypto.Random import get_random_bytes
-        from Crypto.Protocol.SecretSharing import Shamir
-        from binascii import unhexlify
-        from base64 import b64decode,b64encode
-
-        KEY_S = get_random_bytes(16)
-        shares = Shamir.split(2, 5, key)
+        key = get_random_bytes(16)
+        shares = Shamir.split(K, N, key)
         for idx, share in shares:
-            print("Index #%d: %s" % (idx, hexlify(share)))
-
-        #with open("clear.txt", "rb") as fi, open("enc.txt", "wb") as fo:
+            logging.info("PROCESS:Index #%d: %s" % (idx, hexlify(share)))
         
         cipher = AES.new(key, AES.MODE_EAX)
         ct, tag = cipher.encrypt(msg.encode()), cipher.digest()
-        fo.write(cipher.nonce + tag + ct)
 
         self.ENC_INF[str(s)+str(H)+str(h)]=((cipher.nonce,tag,ct))
 
-
-        print(cipher.nonce + tag + ct)
         emsg = b64encode(cipher.nonce + tag + ct)
-        print(ct)
+        logging.info("PROCESS:%s",emsg)
 
+        codec=hashlib.sha256()
+        codec.update(bytes(msg,encoding='utf-8'))
+        self.HASH[str(msg)]=codec.hexdigest()
 
-        H=hmac.new( KEY, msg, hashlib.sha256 ).hexdigest()
-        self.HASH[str(msg)]=str(H)
         if str(s)+str(H)+str(h) not in self.CODESET[str(s)+str(H)+str(h)].keys():
            self.CODESET[str(s)+str(H)+str(h)]=[]
-        for i in range(0,len(encoded_data)):
+        for i in range(0,N):
             self.CODESET[str(s)+str(H)+str(h)].append(shares[i])
         
     def decrypt(self,C,s,h,H):
@@ -270,9 +240,11 @@ class Process:
 
         return result
 
-    def deliver_msg(self, msg,s,H,c,h):# MESSAGE{'FLAG':flag,'FROM':from,'S':s}
+    def deliver_msg(self, msg,s,H,c,h):# TODO new verion of links
+        # MESSAGE{'FLAG':flag,'FROM':from,'S':s}
         # id == 1 checks that the delivery is computed with the sender s that by convention it's the first
-        if msg['FROM'] == msg['S'] and str(msg['FLAG'])+str(s)+str(h) not in self.RECEIVEDMSG.keys():
+        # s is meant for the broadcaster or for the source of the message it changes something?
+        if msg['FROM'] == msg['S'] and str(msg['FLAG'])=='MSG' and str(msg['FLAG'])+str(s)+str(h) not in self.RECEIVEDMSG.keys():
             self.RECEIVEDMSG[str(msg['FLAG'])+str(s)+str(h)]=[]
             self.RECEIVEDMSG[str(msg['FLAG'])+str(s)+str(h)].append(msg['FROM'])
 
@@ -284,16 +256,29 @@ class Process:
             logging.info(
                 "PROCESS: %d,%s --- Starting the ECHO part...", self.sid, self.sip
             )
+
+
             if str(s)+str(H)+str(h) not in self.CODESET.keys():
                 self.CODESET[str(s)+str(H)+str(h)]=[]
-            self.CODESET[str(s)+str(H)+str(h)].append(str(c))
+            self.CODESET[str(s)+str(H)+str(h)].append(c)
 
             self.COUNTER[str('ECHO')+str(s)+str(H)+ str(h)]=self.COUNTER[str('ECHO')+str(s)+str(H)+ str(h)]+1
+
+
             if str('ECHO')+str(s)+str(h) not in self.SENTECHO.keys():
                 self.SENTECHO[str('ECHO')+str(s)+str(h)]=[]
+                
                 msg_temp={}
                 msg_temp['FLAG']='ECHO'
-                self.broadcast(msg_temp, s, H, c,h)
+                #self.broadcast(msg_temp, s, H, c,h)
+                #self.h=self.h+1 # incrementing sequence number
+                msg_temp['FROM']=str(self.sid)
+                msg_temp['S']=str(s)
+
+                for i in range(len(self.ids)):
+                    self.AL[i].send('ECHO',msg_temp,H,c,h)
+                    self.SENTECHO['ECHO'+str(msg['S'])+str(h)].append(str(i+1))
+                self.barrier.wait()
 
     def get_powerset(some_list):
     
@@ -313,31 +298,34 @@ class Process:
 
         return subsets
 
-    def deliver_echo(self, msg ,s,H,c,h):
-        if str(msg['FLAG'])+str(s)+str(h) not in self.RECEIVEDECHO.keys():
-            self.RECEIVEDECHO[str(msg['FLAG'])+str(s)+str(h)]=[]
+    def deliver_echo(self, msg ,s,H,c,h):# TODO flag,source may be in the input of these functions
 
-        if msg['FROM'] not in self.RECEIVEDECHO[str(msg['FLAG'])+str(s)+str(h)].values():
-            self.RECEIVEDECHO[str(msg['FLAG'])+str(s)+str(h)].append(msg['FROM'])
-            self.COUNTER[str(msg['FLAG'])+str(s)+str(H)+ str(h)]=self.COUNTER[str(msg['FLAG'])+str(s)+str(H)+ str(h)]+1
+        if str(msg['FLAG'])=='ECHO':
+    
+            if str(msg['FLAG'])+str(s)+str(h) not in self.RECEIVEDECHO.keys():
+                self.RECEIVEDECHO[str(msg['FLAG'])+str(s)+str(h)]=[]
 
-            if str(msg['FLAG'])+str(s)+str(h) not in self.CODESET.keys():
-                self.CODESET[str(s)+str(H)+str(h)]=[]
-            self.CODESET[str(s)+str(H)+str(h)].append(str(c))
+            if msg['FROM'] not in self.RECEIVEDECHO[str(msg['FLAG'])+str(s)+str(h)].values():
+                self.RECEIVEDECHO[str(msg['FLAG'])+str(s)+str(h)].append(msg['FROM'])
+                self.COUNTER[str(msg['FLAG'])+str(s)+str(H)+ str(h)]=self.COUNTER[str(msg['FLAG'])+str(s)+str(H)+ str(h)]+1
 
-            if self.COUNTER[str(msg['FLAG'])+str(s)+str(H)+ str(h)]>=self.faulty+1:
-                b=False
-                if str(s)+str(h) not in self.MSGSET.keys():
-                    self.MSGSET[str(s)+str(h)]=[]
-                for j in self.MSGSET[str(s)+str(h)]:
-                     if j[0]==str(H):
-                        b=True
-                        break
-                if b==False:
-                    # checking condition and why j
-                    if str(msg['FLAG'])+str(s)+str(msg['FROM']) not in self.CODESET.keys():
-                            self.CODESET[str(s)+str(H)+str(msg['FROM'])]=[]
-                    while True:
+                if str(msg['FLAG'])+str(s)+str(h) not in self.CODESET.keys():
+                    self.CODESET[str(s)+str(H)+str(h)]=[]
+                self.CODESET[str(s)+str(H)+str(h)].append(c)
+
+                if self.COUNTER[str(msg['FLAG'])+str(s)+str(H)+ str(h)]>=self.faulty+1:
+                    b=False
+                    if str(s)+str(h) not in self.MSGSET.keys():
+                        self.MSGSET[str(s)+str(h)]=[]
+                    for j in self.MSGSET[str(s)+str(h)]:
+                        if j[0]==str(H):
+                            b=True
+                            break
+                    if b==False:
+                        # checking condition and why j
+                        if str(msg['FLAG'])+str(s)+str(msg['FROM']) not in self.CODESET.keys():
+                                self.CODESET[str(s)+str(H)+str(msg['FROM'])]=[]
+                        
                         C=[]
                         C=self.CODESET[str(s)+str(H)+str(msg['FROM'])]
                         C=self.get_powerset(C)
@@ -345,58 +333,69 @@ class Process:
                         for l in C:
                         
                             if len(l)==self.faulty+1:
-                                m=self.decrypt(l,s,h,H) 
-                                
-                            if H==hmac.new( KEY, m, hashlib.sha256 ):
-                                    self.MSGSET[str(s)+str(h)].append((H,m))
-            self.check(s, H, h)
-                        
-    def deliver_acc(self, msg,s,H,h):
-        if str(msg['FLAG'])+str(s)+str(h) not in self.RECEIVEDACC.keys():
-            self.RECEIVEDACC[str(msg['FLAG'])+str(s)+str(h)]=[]
-        if msg['FROM'] not in self.RECEIVEDACC[str(msg['FLAG'])+str(s)+str(h)].values():
-                self.RECEIVEDACC[str(msg['FLAG'])+str(s)+str(h)].append(msg['FROM'])
-                self.COUNTER[str(msg['FLAG'])+str(s)+str(H)+str(h)]=self.COUNTER[str(msg['FLAG'])+str(s)+str(H)+str(h)]+1
-                if self.COUNTER[str(msg['FLAG'])+str(s)+str(H)+str(h)]>=self.faulty+1:
-                    b=False
-                    if str(s)+str(h) not in self.MSGSET.keys():
-                         self.MSGSET[str(s)+str(h)]=[]
-                    for j in self.MSGSET[str(s)+str(h)]:
-                        if j[0]==str(H):
-                         b=True
-                         break
-                    if b==False:
-                        msg_temp={}
-                        msg_temp['FLAG']=str('REQ')
-                        self.broadcast(msg_temp,s,H,h)
-                self.check(msg['FROM'], H, h)
+                                m=self.decrypt(l,s,h,H) # TODO checking if passing a set coherent with decrypt function
+                                codec=hashlib.sha256()
+                                codec.update(bytes(m,encoding='utf-8'))
+                                self.HASH[str(m)]=codec.hexdigest()
+                                if H==codec.hexdigest():
+                                        self.MSGSET[str(s)+str(h)].append((H,m))
+                self.check(s, H, h)
+                    
+    def deliver_acc(self, msg,s,H,h):# TODO new version of links
+        if str(msg['FLAG'])=='ACC':
+            if str(msg['FLAG'])+str(s)+str(h) not in self.RECEIVEDACC.keys():
+                self.RECEIVEDACC[str(msg['FLAG'])+str(s)+str(h)]=[]
+            if msg['FROM'] not in self.RECEIVEDACC[str(msg['FLAG'])+str(s)+str(h)].values():
+                    self.RECEIVEDACC[str(msg['FLAG'])+str(s)+str(h)].append(msg['FROM'])
+                    self.COUNTER[str(msg['FLAG'])+str(s)+str(H)+str(h)]=self.COUNTER[str(msg['FLAG'])+str(s)+str(H)+str(h)]+1
+                    if self.COUNTER[str(msg['FLAG'])+str(s)+str(H)+str(h)]>=self.faulty+1:
+                        b=False
+                        if str(s)+str(h) not in self.MSGSET.keys():
+                            self.MSGSET[str(s)+str(h)]=[]
+                        for j in self.MSGSET[str(s)+str(h)]:
+                            if j[0]==str(H):
+                                b=True
+                                break
+                        if b==False:
+                            msg_temp={}
+                            msg_temp['FLAG']='REQ'
+                            #self.broadcast(msg_temp,s,H,h)
+                            # self.h=self.h+1 # incrementing sequence number
+                            msg_temp['FROM']=str(self.sid)
+                            msg_temp['S']=str(s)
+                            for j in range(0,len(self.ids)):
+                                if str('REQ')+str(s)+str(H)+str(h) not in self.SENTREQ.keys():
+                                    self.SENTREQ[str('REQ')+str(s)+str(H)+str(h)]=[]
+                                if str(j) not in self.SENTREQ[str('REQ')+str(s)+str(H)+str(h)].values():
+                                    self.AL[j].send(msg_temp,H,h)# source already in message
+                                    self.SENTREQ['REQ'+str(msg['S'])+str(H)+str(h)].append(str(j+1))  
+                    self.check(msg['FROM'], H, h)
 
-    def deliver_req(self, msg, s,H,h):
-         if str(msg['FLAG'])+str(s)+str(h) not in self.RECEIVEDREQ.keys():
-            self.RECEIVEDREQ[str(msg['FLAG'])+str(s)+str(h)]=[]
-         if msg['FROM'] not in self.RECEIVEDREQ[str(msg['FLAG'])+str(s)+str(h)].values():
-            self.RECEIVEDREQ[str(msg['FLAG'])+str(s)+str(h)].append(msg['FROM'])
-            b=False
-            m=0
-            if str(s)+str(h) not in self.MSGSET.keys():
-                self.MSGSET[str(s)+str(h)]=[]
-            for j in self.MSGSET[str(s)+str(h)]:
-                 if j[0]==str(H):
-                        b=True
-                        m=j[1]
-                        break
-            if b==True:
-                msg_temp={}
-                msg_temp['FLAG']='FWD'
-                # self.h=self.h+1 # incrementing sequence number
-                self.h=self.sid
-                message['FROM']=str(self.sid)
-                message['S']=str(s)
-                self.AL[int(msg['FROM'])].send(message,H,h)
+    def deliver_req(self, msg, s,H,h):# TODO new verion of links
+        if str(msg['FLAG'])=='REQ':
+            if str(msg['FLAG'])+str(s)+str(h) not in self.RECEIVEDREQ.keys():
+                self.RECEIVEDREQ[str(msg['FLAG'])+str(s)+str(h)]=[]
+            if msg['FROM'] not in self.RECEIVEDREQ[str(msg['FLAG'])+str(s)+str(h)].values():
+                self.RECEIVEDREQ[str(msg['FLAG'])+str(s)+str(h)].append(msg['FROM'])
+                b=False
+                m=0
+                if str(s)+str(h) not in self.MSGSET.keys():
+                    self.MSGSET[str(s)+str(h)]=[]
+                for j in self.MSGSET[str(s)+str(h)]:
+                    if j[0]==str(H):
+                            b=True
+                            m=j[1]
+                            break
+                if b==True:
+                    msg_temp={}
+                    msg_temp['FLAG']='FWD'
+                    msg_temp['FROM']=str(self.sid)
+                    msg_temp['S']=str(s)
+                    self.AL[int(msg['FROM'])-1].send(msg_temp,h)
 
-                if str('REQ')+str(s)+str(H)+str(h) not in self.SENTREQ.keys():
-                    self.SENTREQ[str('REQ')+str(s)+str(H)+str(h)]=[]
-                self.SENTREQ['REQ'+str(message['S'])+str(H)+str(h)].append(str(msg['FROM']))  
+                    if str('FWD')+str(s)+str(H)+str(h) not in self.SENTFWD.keys():
+                        self.SENTFWD[str('REQ')+str(s)+str(H)+str(h)]=[]
+                    self.SENTFWD['REQ'+str(message['S'])+str(H)+str(h)].append(str(msg['FROM']))  
 
     def deliver_fwd(self,msg, s, H,h):
         if str(msg['FLAG'])+str(s)+str(H)+str(h) not in self.SENTREQ.keys():
@@ -407,10 +406,12 @@ class Process:
             if msg['FROM'] not in self.RECEIVEDFWD[str(msg['FLAG'])+str(s)+str(msg['MSG'])+str(h) ].values():
                 self.RECEIVEDFWD[str(msg['FLAG'])+str(s)+str(msg['MSG'])+str(h) ].append(str(msg['FROM']))
                 self.MSGSET[str(s)+str(h)].append((H,msg['MSG']))
-                HMAC=hmac.new( KEY, msg['MSG'], hashlib.sha256 )
-                self.check(s, HMAC, h)
+                codec=hashlib.sha256()
+                codec.update(bytes(msg['MSG'],encoding='utf-8'))
+                self.HASH[str(msg['MSG'])]=codec.hexdigest()
+                self.check(s, codec.hexdigest(), h)
 
-    def check(self,s,H,h):
+    def check(self,s,H,h):# TODO new version of links
         b=False
         if str(s)+str(h) not in self.MSGSET.keys():
             self.MSGSET[str(s)+str(h)]=[]
@@ -422,19 +423,49 @@ class Process:
         if b==True:
             if self.COUNTER[str('ECHO')+str(s)+str(H)+str(h)]>=self.faulty+1:
                 if str('ECHO')+str(s)+str(h) not in self.SENTECHO.keys():
-                    msg={}
-                    msg['FLAG']='ECHO'
-                    self.broadcast(msg,s,H,self.CODESET[str(s)+str(H)+str(h)][self.sid],h)
+                        self.SENTECHO[str('ECHO')+str(s)+str(h)]=[]
+                
+                        msg_temp={}
+                        msg_temp['FLAG']='ECHO'
+                        #self.broadcast(msg_temp, s, H, c,h)
+                        #self.h=self.h+1 # incrementing sequence number
+                        msg_temp['FROM']=str(self.sid)
+                        msg_temp['S']=str(s)
+
+                        for i in range(len(self.ids)):
+                            self.AL[i].send('ECHO',msg_temp,H,self.CODESET[str(s)+str(H)+str(h)][self.sid],h) 
+                            self.SENTECHO['ECHO'+str(msg['S'])+str(h)].append(str(i+1))
+                        self.barrier.wait()
+
             if self.COUNTER[str('ECHO')+str(s)+str(H)+str(h)]>=len(self.ids)-self.faulty:
                 if str('ACC')+str(s)+str(h) not in self.SENTACC.keys():
-                    msg={}
-                    msg['FLAG']='ACC'
-                    self.broadcast(msg,s,H,h)
+                    self.SENTACC[str('ACC')+str(s)+str(h)]=[]
+                    msg_temp={}
+                    msg_temp['FLAG']='ACC'
+                    #self.broadcast(msg_temp, s, H, c,h)
+                    #self.h=self.h+1 # incrementing sequence number
+                    msg_temp['FROM']=str(self.sid)
+                    msg_temp['S']=str(s)
+
+                    #self.broadcast(msg,s,H,h)
+                    for i in range(len(self.ids)):
+                        self.AL[i].send('ACC',msg_temp,H,h) 
+                        self.SENTACC['ACC'+str(s)+str(h)].append(str(i+1))
+                    self.barrier.wait()
+
             if self.COUNTER[str('ACC')+str(s)+str(H)+str(h)]>=self.faulty+1:
                 if str('ACC')+str(s)+str(h) not in self.SENTACC.keys():
-                    msg={}
-                    msg['FLAG']='ACC'
-                    self.broadcast(msg,s,H,h)
+                    self.SENTACC[str('ACC')+str(s)+str(h)]=[]
+                    msg_temp={}
+                    msg_temp['FLAG']='ACC'
+                    #self.broadcast(msg_temp, s, H, c,h)
+                    #self.h=self.h+1 # incrementing sequence number
+                    msg_temp['FROM']=str(self.sid)
+                    msg_temp['S']=str(s)
+                    for i in range(len(self.ids)):
+                        self.AL[i].send('ACC',msg_temp,H,h) 
+                        self.SENTACC['ACC'+str(s)+str(h)].append(str(i+1))
+                    self.barrier.wait()
             if self.COUNTER[str('ACC')+str(s)+str(H)+str(h)]>=len(self.ids)-self.faulty:
                 msg={}
                 msg['S']=s
@@ -443,5 +474,5 @@ class Process:
                                 
     def deliver(self,msg):
         # delivering the final message that is a dictionary
-        print("-----MESSAGE DELIVERED:",self.MSGSET[str(msg['S'])+str(msg['H'])][0])
+        print("-----MESSAGE DELIVERED:",self.MSGSET[str(msg['S'])+str(msg['H'])][1])
         delivered=True
