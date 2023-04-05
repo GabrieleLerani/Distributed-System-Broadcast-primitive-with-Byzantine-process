@@ -22,6 +22,7 @@ BROADCASTER_ID=1
 N=10
 K=5
 
+
 KEY=""
 
 
@@ -35,6 +36,7 @@ class Process:
         self.h=0 # sequence number of the message
         self.delivered = False
         self.start=False
+        self.ENC_INF={}
         self.HASH={}
         self.MSGSET = {}
         self.COUNTER={}
@@ -214,31 +216,59 @@ class Process:
 
     def encrypt(self,msg,s,h):
         
-        # create a 4 data block with 2 parity block code generator
-        generator = rs.RSCoder(N, K)
+        
+        from binascii import hexlify
+        from Crypto.Cipher import AES
+        from Crypto.Random import get_random_bytes
+        from Crypto.Protocol.SecretSharing import Shamir
+        from binascii import unhexlify
+        from base64 import b64decode,b64encode
 
-        # encode data
-        encoded_data = generator.encode(msg)
+        KEY_S = get_random_bytes(16)
+        shares = Shamir.split(2, 5, key)
+        for idx, share in shares:
+            print("Index #%d: %s" % (idx, hexlify(share)))
+
+        #with open("clear.txt", "rb") as fi, open("enc.txt", "wb") as fo:
+        
+        cipher = AES.new(key, AES.MODE_EAX)
+        ct, tag = cipher.encrypt(msg.encode()), cipher.digest()
+        fo.write(cipher.nonce + tag + ct)
+
+        self.ENC_INF[str(s)+str(H)+str(h)]=((cipher.nonce,tag,ct))
+
+
+        print(cipher.nonce + tag + ct)
+        emsg = b64encode(cipher.nonce + tag + ct)
+        print(ct)
+
 
         H=hmac.new( KEY, msg, hashlib.sha256 ).hexdigest()
         self.HASH[str(msg)]=str(H)
         if str(s)+str(H)+str(h) not in self.CODESET[str(s)+str(H)+str(h)].keys():
            self.CODESET[str(s)+str(H)+str(h)]=[]
         for i in range(0,len(encoded_data)):
-            self.CODESET[str(s)+str(H)+str(h)].append(encoded_data[i])
+            self.CODESET[str(s)+str(H)+str(h)].append(shares[i])
         
-    def decrypt(self,C):
+    def decrypt(self,C,s,h,H):
         # create a 4 data block with 2 parity block code generator
-        generator = rs.RSCoder(N, K)
 
-        # regenerate lost data
-        regenerated_data = generator.decode(C[0],C[1:])# TODO check if it is correct
+        # C must be a list of tuples like (index,share)
 
-        # logging the result
-        logging.info("PROCESS:Regenerated data %s",regenerated_data)
+        key = Shamir.combine(C)
+
+    
+        nonce, tag=self.ENC_INF[str(s)+str(H)+str(h)][:2] 
+        cipher = AES.new(key, AES.MODE_EAX, nonce)
+        try:
+            result = cipher.decrypt(self.ENC_INF[str(s)+str(H)+str(h)][2])
+            cipher.verify(tag)
+            logging.info("Result of decryption:%s",result)
+        except ValueError:
+            print("The shares were incorrect")
 
 
-        return regenerated_data
+        return result
 
     def deliver_msg(self, msg,s,H,c,h):# MESSAGE{'FLAG':flag,'FROM':from,'S':s}
         # id == 1 checks that the delivery is computed with the sender s that by convention it's the first
@@ -315,7 +345,7 @@ class Process:
                         for l in C:
                         
                             if len(l)==self.faulty+1:
-                                m=self.decrypt(l) 
+                                m=self.decrypt(l,s,h,H) 
                                 
                             if H==hmac.new( KEY, m, hashlib.sha256 ):
                                     self.MSGSET[str(s)+str(h)].append((H,m))
