@@ -5,11 +5,12 @@ import socket
 from threading import Thread
 import json
 import struct
+import time
 import logging
 from Crypto.PublicKey import RSA
 from sys import platform
 from hashlib import sha512
-import AuthenticatedLink
+import Authenticated_Link
 
 SERVER_ID = "localhost"
 SERVER_PORT = 5000
@@ -147,7 +148,7 @@ class Process:
                     #self.broadcast(final_msg_dict)
                     for j in range(0, len(self.ids)):
                         self.L[j].link_send(final_msg_dict)     
-                        logging.info("PROCESS:signed vote messages:%s,broadcasted successfully", message.get('MSG'))
+                        logging.info("PROCESS:signed vote messages:%s,broadcasted successfully", final_msg_dict.get('MSG'))
 
 
                     self.deliver(final_msg_dict['MSG'])
@@ -335,7 +336,7 @@ class Process:
                     for id in list(msg['keys'].values()):
                         if self.check_signature(msg['keys'][str(id)+PLACEHOLDER]['MSG'],msg['keys'][str(id)+PLACEHOLDER]['SIGN']):
                             counter=counter+1
-                        if counter==len(self.ids)-f:
+                        if counter==len(self.ids)-self.f:
                             self.deliver(msg['keys'][str(id)+PLACEHOLDER]['MSG'])
                 else:
                     logging.info("PROCESS:Already delivered not re-broadcast all the signed vote messages")
