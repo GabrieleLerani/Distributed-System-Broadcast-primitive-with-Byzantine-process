@@ -314,7 +314,7 @@ class Process:
                 if self.__hash(msg) == hash:
 
                     # the two ifs are merged inside only one because there is no action taken without one of them
-                    if self.echo_counter[("ECHO", source, hash, sequence_number)] >= self.faulty + 1 and ["ECHO", source, sequence_number] not in self.echos_sent:
+                    if ("ECHO", source, hash, sequence_number) in self.echo_counter and self.echo_counter[("ECHO", source, hash, sequence_number)] >= self.faulty + 1 and ["ECHO", source, sequence_number] not in self.echos_sent:
                         # It inserts the ECHO sent in the variable so that it is not sent again
                         # It is done before the actual send because sending it to all other nodes is time-consuming,
                         # so the process receives its own ECHO message before the insertion of the message
