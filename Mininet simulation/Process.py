@@ -91,6 +91,10 @@ class Process:
         # print("-----GATHERED ALL THE PEERS IPS FROM THE BOOTSTRAP SERVER-----")
         # print("-----STARTING SENDING OR RECEIVING MESSAGES-----")
 
+        # Start tracing memory for statistics
+        self.eval.tracing_start()
+
+        # Populate ids ips from file
         self.init_process_ids()
 
         logging.debug("PROCESS: id list: %s,ip list %s", self.ids, self.ips)
@@ -149,7 +153,8 @@ class Process:
                         if msg not in self.currentMSG:
                             self.currentMSG.append(msg)
 
-                        self.AL[i].send(msg, flag="READY")
+                        packet = {"MSG": msg, "FLAG": "READY"}
+                        self.AL[i].send(packet)
 
                 if counter_readys > self.faulty and self.sentready is False:
                     self.sentready = True
@@ -161,17 +166,23 @@ class Process:
                         if msg not in self.currentMSG:
                             self.currentMSG.append(msg)
 
-                        self.AL[i].send(msg, flag="READY")
+                        packet = {"MSG": msg, "FLAG": "READY"}
+                        self.AL[i].send(packet)
 
                 if counter_readys > 2 * self.faulty and self.delivered is False:
                     self.delivered = True
 
                     logging.info("PROCESS: %d,%s", self.selfid, self.selfip)
+
+                    # used for statistics
+
+                    peak = self.eval.tracing_mem()
                     logging.info(
-                        "-----MESSAGE DELIVERED: %s, time: %s", msg, time.time()
+                        "-----MESSAGE DELIVERED: %s, time: %s, size: %s",
+                        msg,
+                        time.time() * 1000,
+                        peak,
                     )
-                    if self.selfid == 1:
-                        self.eval.check_time()
 
                     print("-----MESSAGE DELIVERED:", msg)
 
@@ -245,22 +256,25 @@ class Process:
         #     self.AL[j].receiver()
 
         logging.info(
-            "----- EVALUATION CHECKPOINT: broadcast start, time: %s -----", time.time()
+            "----- EVALUATION CHECKPOINT: broadcast start, time: %s -----",
+            time.time() * 1000,
         )
-        self.eval.check_time()
+
+        # Create packet as a dictionary
+        packet = {"MSG": message, "FLAG": "SEND"}
         for i in range(len(self.ids)):
             if message not in self.currentMSG:
                 self.currentMSG.append(message)
-            self.AL[i].send(message, flag="SEND")
+            self.AL[i].send(packet)
         self.barrier.wait()
 
-    def deliver_send(self, msg, flag, idn):
+    def deliver_send(self, msg, idn):
         # id == 1 checks that the delivery is computed with the sender s that by convention it's the first
 
-        if flag == "SEND" and idn == 1 and self.sentecho is False:
+        if msg["FLAG"] == "SEND" and idn == 1 and self.sentecho is False:
             # Add the message if it's not yet received
-            if msg not in self.currentMSG:
-                self.currentMSG.append(msg)
+            if msg["MSG"] not in self.currentMSG:
+                self.currentMSG.append(msg["MSG"])
             self.sentecho = True
             if self.selfid == 1:
                 self.barrier.wait()
@@ -271,27 +285,29 @@ class Process:
                 "PROCESS: %d,%s --- Starting the ECHO part...", self.selfid, self.selfip
             )
 
+            # create packet
+            packet = {"MSG": msg["MSG"], "FLAG": "ECHO"}
             for i in range(len(self.ids)):
-                self.AL[i].send(msg, flag="ECHO")
+                self.AL[i].send(packet)
         elif idn != 1:
             logging.info("PROCESS: %d is not the intended sender!", idn)
 
-    def deliver_echo(self, msg, flag, idn):
-        logging.info("PROCESS: Msg: %s, flag: %s, id: %d", msg, flag, idn)
+    def deliver_echo(self, msg, idn):
+        logging.info("PROCESS: Msg: %s, flag: %s, id: %d", msg["MSG"], msg["FLAG"], idn)
         logging.info("PROCESS: CURRENTMSG %s", self.currentMSG)
-        if flag == "ECHO" and idn not in self.echos:
-            if msg not in self.currentMSG:
-                self.currentMSG.append(msg)
-            self.echos[idn] = msg
+        if msg["FLAG"] == "ECHO" and idn not in self.echos:
+            if msg["MSG"] not in self.currentMSG:
+                self.currentMSG.append(msg["MSG"])
+            self.echos[idn] = msg["MSG"]
 
             logging.info("PROCESS: --------ECHOS VALUE: %s:", self.echos)
 
-    def deliver_ready(self, msg, flag, idn):
-        logging.info("PROCESS: Msg: %s, flag: %s, id: %d", msg, flag, idn)
+    def deliver_ready(self, msg, idn):
+        logging.info("PROCESS: Msg: %s, flag: %s, id: %d", msg["MSG"], msg["FLAG"], idn)
         logging.info("PROCESS: CURRENTMSG %s", self.currentMSG)
-        if flag == "READY" and idn not in self.readys:
-            if msg not in self.currentMSG:
-                self.currentMSG.append(msg)
-            self.readys[idn] = msg
+        if msg["FLAG"] == "READY" and idn not in self.readys:
+            if msg["MSG"] not in self.currentMSG:
+                self.currentMSG.append(msg["MSG"])
+            self.readys[idn] = msg["MSG"]
 
             logging.info("PROCESS: --------READYS VALUE: %s:", self.readys)

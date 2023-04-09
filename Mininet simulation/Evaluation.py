@@ -1,105 +1,155 @@
-import time
 import tracemalloc
 import csv
 import os
 import re
+import threading
+import psutil
+import logging
 import numpy as np
 import pandas as pd
 
+CPU_SAMPLING_FREQUENCY = 0.005
+
 
 class Evaluation:
-    def __init__(self):
-        self.start = 0
-        self.end = 0
-        self.snap = []
+    def __init__(self, *args):
+        if len(args) > 1:
+            self.proc_number = args[0]
+            self.sim_number = args[1]
+        self.cpu_values = np.array([])
 
-    def check_time(self):
-        if self.start != 0:
-            self.end = time.time()
-            execution_time = self.end - self.start
-            self.end = 0
-            print(f"{execution_time} ms")
-        self.start = time.time()
-
-    def start_check_resources(self):
+    def tracing_start(self):
         tracemalloc.start()
 
-    def take_snapshot(self, flag):
-        self.snap.append([tracemalloc.take_snapshot(), flag])
-
-    def snap_diff(self):
-        compare = self.snap[len(self.snap) - 1].compare_to(
-            self.snap[len(self.snap) - 2], "lineno", False
-        )
-        for i in compare:
-            print(i)
-
-    def stats(self):
-        stats = self.snap[len(self.snap) - 1].statistics()
-        for i in stats:
-            print(i)
-
-    def memory_used(self):
-        size, peak = tracemalloc.get_tracemalloc_memory()
-        print("Size is: " + size + "\nPeak is: " + peak)
-
-    def stop_check_resources(self):
+    def tracing_stop(self):
         tracemalloc.stop()
 
-    # helper function
-    def __write_exec_time_on_file(self, process_id, time, title, sim):
-        with open("statistics/execution_times.csv", "a", newline="") as file:
+    def tracing_mem(self):
+        # peak memory is the maximum space the program used while executing
+        size, peak = tracemalloc.get_traced_memory()
+        self.tracing_stop()
+        return peak / (1024 * 1024)  # returns peak expressed in KiB
+
+    def monitor_cpu(self):
+        global running
+        running = True
+        currentProcess = psutil.Process()
+
+        # start loop
+        while running:
+            value = currentProcess.cpu_percent(interval=CPU_SAMPLING_FREQUENCY)
+            print("CPU value:", value)
+            self.cpu_values = np.append(self.cpu_values, value)
+
+    def start_cpu_monitoring(self):
+        global t
+
+        # create thread and start it
+        t = threading.Thread(target=self.monitor_cpu)
+        t.start()
+
+    def stop_cpu_monitoring(self):
+        global running
+        global t
+
+        # use `running` to stop loop in thread so thread will end
+        running = False
+
+        # wait for thread's end
+        t.join()
+
+        # write cpu usage to file
+        self.__write_cpu_file()
+
+    def __write_cpu_file(self):
+        self.cpu_values.tofile("statistics/cpu_usage.csv", sep=",")
+
+    # helper function to write stats time on file
+    def __write_stats_on_file(self, process_id, time, peak_size, sim, title):
+        with open("statistics/stats.csv", "a", newline="") as file:
             writer = csv.writer(file)
             if title:
-                writer.writerow(["Process id", "Execution time", "Run"])
+                writer.writerow(
+                    [
+                        "Process id",
+                        "Execution time",
+                        "Peak size",
+                        "Run",
+                    ]
+                )
                 return
-            writer.writerow([process_id, time, sim])
+            writer.writerow([process_id, time, peak_size, sim])
 
-    # helper function
-    def __find_time_in_log_file(self, lines):
+    # helper function to find the execution function from debug file
+    def __find_stats_in_log_file(self, lines):
         start_time = 0
         end_time = 0
+        mem_peak_size = 0
+        # check if some process deliver, it may be redundant but it's statistic
+        # computation and it's not required having high performance requirements in this phase
+        found = False
+        for line in lines:
+            if "MESSAGE DELIVERED" in line:
+                found = True
+                break
+        if not found:
+            logging.info("MESSAGE NOT DELIVERED FOR SOME PROCESS")
+            exit(-1)
+
         for line in lines:
             if "EVALUATION CHECKPOINT" in line and start_time == 0:
-                temp1 = re.findall("time.+[0-9]", line)
-                temp2 = re.findall("[0-9]+", str(temp1))
-                start_time = float(".".join(temp2))
+                time_temp1 = re.findall("time.+[0-9]", line)
+                time_temp2 = re.findall("[0-9]+", str(time_temp1))
+                start_time = float(".".join(time_temp2))
             elif "MESSAGE DELIVERED" in line:
-                temp1 = re.findall("time.+[0-9]", line)
-                temp2 = re.findall("[0-9]+", str(temp1))
-                end_time = float(".".join(temp2))
-        return end_time - start_time
+                temp_string = re.findall("time.+[0-9]", line)[0]
+
+                # Define a regular expression to parse the time and peak values
+                pattern = r"time: ([\d\.]+), size: ([\d\.]+)"
+
+                match = re.match(pattern, temp_string)
+                if match:
+                    end_time = float(match.group(1))
+                    mem_peak_size = float(match.group(2))
+                else:
+                    print("No time and peak match in file")
+
+        return end_time - start_time, mem_peak_size
 
     # The following function gets execution time from log file
     # of each process and writes them in a file
-    def create_execution_time_file(self, sim_number):
+    def create_stats_file(self, sim_number):
+        # following code used to write stats column title
+        self.__write_stats_on_file(0, 0, 0, 0, True)
         for i in range(sim_number):
-            folder = "debug/sim%i" % (i + 1)
-            self.__write_exec_time_on_file(0, 0, True, 0)
+            folder = "simulations/sim%i" % (i + 1)
             for filename in os.listdir(folder):
                 if "debug" in filename:
                     # with open("folder/%s" % filename, "r", newline="\n") as file:
                     with open(folder + "/" + filename, "r", newline="\n") as file:
                         lines = file.readlines()
-
-                        execution_time = self.__find_time_in_log_file(lines)
+                        execution_time, peak_size = self.__find_stats_in_log_file(lines)
                         process_id = ".".join(re.findall("[0-9]+", filename))
-                        self.__write_exec_time_on_file(
-                            process_id, execution_time, False, i
+                        self.__write_stats_on_file(
+                            process_id, execution_time, peak_size, i + 1, False
                         )
 
 
 if __name__ == "__main__":
-    eval = Evaluation()
-    # eval.create_execution_time_file()
+    # eval = Evaluation(8, 3)
+    # eval.create_stats_file(eval.sim_number)
 
-    df = pd.read_csv("statistics/execution_times.csv")
+    df = pd.read_csv("statistics/stats.csv")
     print(df)
     times_array = df["Execution time"].values
+    peaks_array = df["Peak size"].values
 
     avg_exec_time = np.average(times_array)
     std_exec_time = np.std(times_array)
+    avg_peak = np.average(peaks_array)
+    std_peak = np.std(peaks_array)
+
     print(f"avg execution time: {avg_exec_time} ms")
     print(f"std execution time: {std_exec_time} ms")
-
-    np.disp(times_array)
+    print(f"std peak size: {avg_peak} KiB")
+    print(f"std peak size: {std_peak} KiB")

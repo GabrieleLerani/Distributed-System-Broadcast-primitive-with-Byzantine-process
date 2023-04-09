@@ -3,11 +3,12 @@ import logging
 import Process
 import sys
 import time
-import Evaluation
 import utils
-import timeit
+import Evaluation
 
-TIME_BEFORE_BROADCAST = 5
+
+TIME_BEFORE_BROADCAST = 2
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 3:
@@ -24,6 +25,7 @@ if __name__ == "__main__":
         utils.set_process_logging(sim_num)
         logging.info("MAIN:STARTING PROTOCOL--> BYZANTINE RELIABLE BROADCAST")
         p = Process.Process()
+
         p.connection_to_server()
         p.creation_links()
 
@@ -35,11 +37,15 @@ if __name__ == "__main__":
 
     else:
         sim_num = sys.argv[1]
+
         utils.set_process_logging(sim_num)
         logging.info("MAIN:STARTING PROTOCOL--> BYZANTINE RELIABLE BROADCAST")
 
         p = Process.Process()
 
+        # eval = Evaluation.Evaluation()
+
+        # eval.tracing_start()
         p.connection_to_server()
         p.creation_links()
 
