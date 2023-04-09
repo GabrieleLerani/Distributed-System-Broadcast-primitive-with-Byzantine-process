@@ -1,0 +1,133 @@
+INFO:root:MAIN:STARTING PROTOCOL--> HASH BASED BROADCAST
+INFO:root:PROCESS:Starting thread on function thread
+INFO:root:LINK:Creating link for receiving from <192.168.1.11,1>
+INFO:root:LINK:Creating link for sending to <192.168.1.11,1>
+INFO:root:PROCESS:links successfully created
+INFO:root:PROCESS:data structures for processes successfully created
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.1 connecting to ('192.168.1.11', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=516, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.1.11', 52766), raddr=('192.168.1.11', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x000001EB16045F60>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x000001EB16045F60> params=<ConnectionParameters host=192.168.1.11 port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x000001EB16045F60> params=<ConnectionParameters host=192.168.1.11 port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x000001EB16045F60> params=<ConnectionParameters host=192.168.1.11 port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x000001EB16045F60> params=<ConnectionParameters host=192.168.1.11 port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:root:PROCESS: 1,192.168.1.11 --- My queue length: 2
+INFO:root:PROCESS: [x] Received b'192.168.1.11#1'
+INFO:root:PROCESS: [x] Received b'192.168.1.103#2'
+INFO:root:PROCESS:data structures for new incoming process successfully created
+INFO:root:PROCESS:data structures of processes for new incoming process successfully updated
+INFO:root:LINK:Creating link for receiving from <192.168.1.103,2>
+INFO:root:LINK:Creating link for sending to <192.168.1.103,2>
+INFO:root:PROCESS:links for new incoming process successfully created
+INFO:pika.channel:Closing channel (0): 'Normal shutdown' on <Channel number=1 OPEN conn=<SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x000001EB16045F60> params=<ConnectionParameters host=192.168.1.11 port=5672 virtual_host=/ ssl=False>>>
+INFO:pika.channel:Received <Channel.CloseOk> on <Channel number=1 CLOSING conn=<SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x000001EB16045F60> params=<ConnectionParameters host=192.168.1.11 port=5672 virtual_host=/ ssl=False>>>
+INFO:pika.adapters.blocking_connection:Closing connection (200): Normal shutdown
+INFO:pika.connection:Closing connection (200): 'Normal shutdown'
+INFO:pika.adapters.utils.io_services_utils:Aborting transport connection: state=1; <socket.socket fd=516, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.1.11', 52766), raddr=('192.168.1.11', 5672)>
+INFO:pika.adapters.utils.io_services_utils:_AsyncTransportBase._initate_abort(): Initiating abrupt asynchronous transport shutdown: state=1; error=None; <socket.socket fd=516, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.1.11', 52766), raddr=('192.168.1.11', 5672)>
+INFO:pika.adapters.utils.io_services_utils:Deactivating transport: state=1; <socket.socket fd=516, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.1.11', 52766), raddr=('192.168.1.11', 5672)>
+INFO:pika.connection:AMQP stack terminated, failed to connect, or aborted: opened=True, error-arg=None; pending-error=ConnectionClosedByClient: (200) 'Normal shutdown'
+INFO:pika.connection:Stack terminated due to ConnectionClosedByClient: (200) 'Normal shutdown'
+INFO:pika.adapters.utils.io_services_utils:Closing transport socket and unlinking: state=3; <socket.socket fd=516, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.1.11', 52766), raddr=('192.168.1.11', 5672)>
+INFO:pika.adapters.blocking_connection:User-initiated close: result=BlockingConnection__OnClosedArgs(connection=<SelectConnection CLOSED transport=None params=<ConnectionParameters host=192.168.1.11 port=5672 virtual_host=/ ssl=False>>, error=ConnectionClosedByClient: (200) 'Normal shutdown')
+INFO:root:PROCESS:marshalling first broadcast message for the broadcaster
+INFO:root:AUTH: Key generated
+INFO:root:AUTH: <192.168.1.11, 1> is the one with this key: {1: b'\xf70\xce\xf5.c!\xef5\x05S\x95\x11\xc6\xca4\xf9\x07\xb8s\n4b\xfa\xeci`\xb4|\x9bz\xa7'}
+INFO:root:PROCESS:Received a message of type 0
+INFO:root:PROCESS:Calling KDS to get key pair
+INFO:root:PROCESS:Connecting to KDS
+INFO:root:AUTH: Key generated
+INFO:root:PROCESS:Signature:<0x5fa2b37fbdb0b2954624e6eecaf92950f53641abe80bbecc0facaaaf18a5bb96a1cfa8d9725bf26dc61c2029b0d1d6aa22de0504c211b0468f12ead04ab3b34d2ff72c1bf3aece5d21cfa0c8cd92af2475e085baaa9ea8ff1f0cb35c34ccb6bf2a14c7fa7ed4518d56e1c742e9224422891355cfb1b3b76e52f8e978313ea252>
+INFO:root:LINK:Sending message to Link_handler module from Link module
+INFO:root:LINK:Sending message to Link_handler module from Link module
+INFO:root:LINK_H:Sending message to process<192.168.1.103>,<5112>
+INFO:root:LINK_H:Sending message to process<192.168.1.11>,<5111>
+INFO:root:PROCESS:Vote message:{'FLAG': 'VOTE', 'MSG': 'CIAO', 'SIGN': 67157568073211844820476249822107435717999203336845839677872034825617481973554555449370817084119868346165321028555996401800696075490893107648981777687895195246158791948809141562866512664942073700303492346913034406077330695943760194848395398748167785566621343485508376298680874743269243362410446814990982619730, 'TYPE': 1, 'FROM': 1},broadcasted successfully
+INFO:root:LINK_H:Message sent successfully
+INFO:root:LINK:Forwarding message to process module from Link module
+INFO:root:PROCESS:Received a message of type 1
+INFO:root:PROCESS:Calling KDS to get public key
+INFO:root:LINK_H:Message sent successfully
+INFO:root:PROCESS:Connecting to KDS
+INFO:root:PROCESS:Signature check exit:<True>
+INFO:root:PROCESS:Message:{'TYPE': 0},broadcasted successfully
+INFO:root:MAIN:-----SUCCESSFULLY EXIT-----
+INFO:root:LINK:Forwarding message to process module from Link module
+INFO:root:PROCESS:Received a message of type 1
+INFO:root:PROCESS:Calling KDS to get public key
+INFO:root:PROCESS:Connecting to KDS
+INFO:root:PROCESS:Signature check exit:<True>
+INFO:root:LINK:Sending message to Link_handler module from Link module
+INFO:root:PROCESS:signed vote messages:CIAO,broadcasted successfully
+INFO:root:LINK:Sending message to Link_handler module from Link module
+INFO:root:LINK_H:Sending message to process<192.168.1.103>,<5112>
+INFO:root:LINK_H:Sending message to process<192.168.1.11>,<5111>
+INFO:root:PROCESS:signed vote messages:CIAO,broadcasted successfully
+INFO:root:LINK_H:Message sent successfully
+INFO:root:LINK:Forwarding message to process module from Link module
+INFO:root:PROCESS:-----ENDING PROTOCOL--> AUTHENTICATED MESSAGES BROADCAST-----
+INFO:root:LINK_H:Message sent successfully
+INFO:root:LINK:Forwarding message to process module from Link module
+INFO:root:PROCESS:Received a message of type 2
+INFO:root:PROCESS:-----SUCCESSFULL EXIT-----
+INFO:root:PROCESS:Received a message of type 2
+INFO:root:PROCESS:Already delivered not re-broadcast all the signed vote messages
+INFO:root:LINK_H: Closing sending interface
+INFO:root:LINK_H: Closing receiving interface
+INFO:root:LINK_H: Closing receiving interface
+INFO:root:LINK_H: Closing sending interface
+INFO:root:PROCESS:Already delivered not re-broadcast all the signed vote messages
+INFO:root:AUTH:Socket error: [WinError 10038] Tentativo di operazione su un elemento diverso dal socket
+INFO:root:AUTH:Socket error: [WinError 10038] Tentativo di operazione su un elemento diverso dal socket
+INFO:root:AUTH:Closing receiving auth interface
+INFO:root:AUTH:Closing receiving auth interface
+n=<SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x000001C5DC4C41C0> params=<ConnectionParameters host=192.168.1.11 port=5672 virtual_host=/ ssl=False>>>
+INFO:pika.connection:Closing connection (200): 'Normal shutdown'
+INFO:pika.channel:Received <Channel.CloseOk> on <Channel number=1 CLOSING conn=<SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x000001C5DC4C4490> params=<ConnectionParameters host=192.168.1.11 port=5672 virtual_host=/ ssl=False>>>
+INFO:pika.connection:Closing connection (200): 'Normal shutdown'
+INFO:pika.adapters.utils.io_services_utils:Aborting transport connection: state=1; <socket.socket fd=608, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.1.11', 52761), raddr=('192.168.1.11', 5672)>
+INFO:pika.adapters.utils.io_services_utils:_AsyncTransportBase._initate_abort(): Initiating abrupt asynchronous transport shutdown: state=1; error=None; <socket.socket fd=608, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.1.11', 52761), raddr=('192.168.1.11', 5672)>
+INFO:pika.adapters.utils.io_services_utils:Deactivating transport: state=1; <socket.socket fd=608, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.1.11', 52761), raddr=('192.168.1.11', 5672)>
+INFO:pika.connection:AMQP stack terminated, failed to connect, or aborted: opened=True, error-arg=None; pending-error=ConnectionClosedByClient: (200) 'Normal shutdown'
+INFO:pika.connection:Stack terminated due to ConnectionClosedByClient: (200) 'Normal shutdown'
+INFO:pika.adapters.utils.io_services_utils:Closing transport socket and unlinking: state=3; <socket.socket fd=608, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.1.11', 52761), raddr=('192.168.1.11', 5672)>
+INFO:pika.adapters.blocking_connection:User-initiated close: result=BlockingConnection__OnClosedArgs(connection=<SelectConnection CLOSED transport=None params=<ConnectionParameters host=192.168.1.11 port=5672 virtual_host=/ ssl=False>>, error=ConnectionClosedByClient: (200) 'Normal shutdown')
+INFO:pika.adapters.utils.io_services_utils:Aborting transport connection: state=1; <socket.socket fd=612, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.1.11', 52762), raddr=('192.168.1.11', 5672)>
+INFO:pika.adapters.utils.io_services_utils:_AsyncTransportBase._initate_abort(): Initiating abrupt asynchronous transport shutdown: state=1; error=None; <socket.socket fd=612, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.1.11', 52762), raddr=('192.168.1.11', 5672)>
+INFO:pika.adapters.utils.io_services_utils:Deactivating transport: state=1; <socket.socket fd=612, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.1.11', 52762), raddr=('192.168.1.11', 5672)>
+INFO:pika.connection:AMQP stack terminated, failed to connect, or aborted: opened=True, error-arg=None; pending-error=ConnectionClosedByClient: (200) 'Normal shutdown'
+INFO:pika.connection:Stack terminated due to ConnectionClosedByClient: (200) 'Normal shutdown'
+INFO:pika.adapters.utils.io_services_utils:Closing transport socket and unlinking: state=3; <socket.socket fd=612, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.1.11', 52762), raddr=('192.168.1.11', 5672)>
+INFO:pika.adapters.blocking_connection:User-initiated close: result=BlockingConnection__OnClosedArgs(connection=<SelectConnection CLOSED transport=None params=<ConnectionParameters host=192.168.1.11 port=5672 virtual_host=/ ssl=False>>, error=ConnectionClosedByClient: (200) 'Normal shutdown')
+INFO:root:SERVER: waiting for a connection
+INFO:root:THREAD_CONN: dictionaries of ips list sent successfully
+INFO:root:SERVER: connection from ('192.168.1.11', 52769)
+INFO:root:KDS: request to generate public/private key pair
+INFO:root:Generating key for process
+INFO:root:Public key:  (n=0x90b7e800d1c8c09b264f3f6db3881f2a8d5be3b31982c697791f0225a8853b2674e4f005d096a1fa614e4c113fa6e5fcfbb40cc14ed67a6a114ac1044605cf25fb53abcde4ecac4a02e5347bd5290b5c6c498dfe86fb44f01a2fadad077058377c508450da6f047f4a192629b026bec8f9b691ed3a3b57d158d96befddab62db, e=0x10001)
+INFO:root:Private key: (n=0x90b7e800d1c8c09b264f3f6db3881f2a8d5be3b31982c697791f0225a8853b2674e4f005d096a1fa614e4c113fa6e5fcfbb40cc14ed67a6a114ac1044605cf25fb53abcde4ecac4a02e5347bd5290b5c6c498dfe86fb44f01a2fadad077058377c508450da6f047f4a192629b026bec8f9b691ed3a3b57d158d96befddab62db, d=0x33cb564200d31038171072db90cf2d945dae5f02a925386d5b00a19497c9433fc2c373322992d7db143b6117254856f4e1a2f193b7e32441d4f983b643576de9189e1ff886bfe72561369c9d7873f875ab4d722e4f86c7a4232f403fd5a3d65aa722894a4a71a0cc3490770c4e4905ef0207fd7edca37bfe79507ed99e461d29)
+INFO:root:KDS:Public key of 1 registered
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('192.168.1.11', 52773)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 1 sent
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('192.168.1.103', 52817)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 1 sent
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('192.168.1.103', 52818)
+INFO:root:KDS: request to generate public/private key pair
+INFO:root:Generating key for process
+INFO:root:Public key:  (n=0xbf066b1c51e35b7f0ffb544660bdc0545610546aac8df9f31247adbe97e76612dcd83f79b79c5be5c84d8bc0f3873366163942c73d9e8bcd346d7ac5b3ee38434f69269337084968cae888b71286d1b4a0835c9635ef0acced19648e45e42d1861f6d61857f9513ebe7bf868728fbc296017dc4f49b93c1a61e4f67eaf46d3fb, e=0x10001)
+INFO:root:Private key: (n=0xbf066b1c51e35b7f0ffb544660bdc0545610546aac8df9f31247adbe97e76612dcd83f79b79c5be5c84d8bc0f3873366163942c73d9e8bcd346d7ac5b3ee38434f69269337084968cae888b71286d1b4a0835c9635ef0acced19648e45e42d1861f6d61857f9513ebe7bf868728fbc296017dc4f49b93c1a61e4f67eaf46d3fb, d=0x3dbbb9c6cbb201a2350c808644025e9302c3413cbe2a1de24f8089a6441a1c9330fad3bca6b969bb7f398c561d7d8e7f49e4546fe63a842c9b6a5c18635733a8010c47f0b359ef02a1e624122ea24328080312da5c029f7f5d85ccff472505c35a1183826f5322f84c803fabca91f397a8b0220c2f7b33b486665f830259a96d)
+INFO:root:KDS:Public key of 2 registered
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('192.168.1.11', 52776)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 2 sent
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('192.168.1.103', 52821)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 2 sent
+INFO:root:KDS:No more data from client
