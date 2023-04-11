@@ -3,11 +3,13 @@
 from mininet.net import Mininet
 from mininet.node import RemoteController
 from mininet.node import CPULimitedHost, Host, Node
+from mininet.topo import Topo
 from mininet.node import OVSKernelSwitch, UserSwitch
 from mininet.node import IVSSwitch
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info
 from mininet.link import TCLink, Intf
+from mininet.util import ipAdd
 from subprocess import call, Popen, PIPE
 from threading import Thread
 import time
@@ -16,7 +18,7 @@ import time
 CHANNEL_BANDWIDTH = 1  # Mbps
 DELAY = 0.06  # ms
 
-setLogLevel("info")
+setLogLevel("warning")
 
 
 # Create a single switch topology
@@ -60,14 +62,14 @@ def create_single_network(N):
     for controller in net.controllers:
         controller.start()
 
-    info("*** Starting switche\n")
+    info("*** Starting switch\n")
     net.get("s1").start([c0])
 
     info("*** Post configure switches and hosts\n")
     # Test ping reachability
     net.pingAll()
     net.start()
-    return net, hosts
+    return net
 
 
 # create a linear topology with N switches and N hosts
@@ -127,12 +129,37 @@ def create_linear_network(N):
 
     info("*** Post configure switches and hosts\n")
     # Test ping reachability
-    net.pingAll()
     net.start()
-    return net, hosts
+    net.pingAll()
+
+    return net
 
 
-def run_hosts(net, hosts, sim_number):
+# The following method attaches N new host to an existing network
+# TODO it's valid only for single switch topology, modify to adapt to other topology
+def add_processes(net, N):
+    num_hosts = len(net.hosts)
+    switch = net.get("s1")
+    for i in range(N):
+        host_index = num_hosts + i + 1
+        host_name = f"h{host_index}"
+        new_host_ip = f"10.0.0.{host_index}"
+        new_host = net.addHost(name=host_name, ip=new_host_ip)
+        new_host.cmd("ifconfig lo up")
+        net.addLink(new_host, switch, bw=CHANNEL_BANDWIDTH, delay=DELAY)
+        new_host.setIP(
+            ip="10.0.0.{}".format(host_index),
+            intf="h{}-eth0".format(host_index),
+        )
+
+    net.start()
+    net.pingAll()
+    return net
+
+
+# To run hosts I need mininet instance, message, round and simulation number
+# are used to initialize debug folder for each process during the simulation
+def run_hosts(net, size, round, sim_number, message):
     # server_node = net.get("nat0")
     # t = Thread(target=run_server, args=(server_node,))
     # t.start()
@@ -141,10 +168,12 @@ def run_hosts(net, hosts, sim_number):
     # time.sleep(0.2)
 
     # for i in range(2, len(hosts) + 2):
+    hosts = net.hosts
 
+    # TODO try to run hosts in a random order
     info("*** Executing BRB\n")
     for i in range(len(hosts), 0, -1):
-        # Sender is the process with the highest id
+        # convention: sender is the process with the highest id
         if i == len(hosts):
             sender = net.get("h%i" % i)
 
@@ -152,13 +181,16 @@ def run_hosts(net, hosts, sim_number):
                 target=run_sender,
                 args=(
                     sender,
+                    message,
+                    size,
+                    round,
                     sim_number,
                 ),
             )
             t.start()
 
             # Used to allow sender to start
-            time.sleep(0.3)
+            time.sleep(0.1)
         else:
             receiver = net.get("h%i" % i)
 
@@ -166,20 +198,39 @@ def run_hosts(net, hosts, sim_number):
                 target=run_receiver,
                 args=(
                     receiver,
+                    size,
+                    round,
                     sim_number,
                 ),
             )
             t.start()
 
 
-def run_sender(sender, sim_number):
-    print(f"Executing sender")
-    sender.pexec(["python3", "ProcessMain.py", "Hello", "%i" % sim_number])
+def run_sender(sender, message, payload_size, round, sim_number):
+    print(f"--- Executing sender round:{round}, exec:{sim_number}")
+    sender.pexec(
+        [
+            "python3",
+            "ProcessMain.py",
+            message,
+            "%i" % payload_size,
+            "%i" % round,
+            "%i" % sim_number,
+        ]
+    )
 
 
-def run_receiver(receiver, sim_number):
-    print(f"Executing receiver")
-    receiver.pexec(["python3", "ProcessMain.py", "%i" % sim_number])
+def run_receiver(receiver, payload_size, round, sim_number):
+    print(f"--- Executing receiver round:{round}, exec:{sim_number}")
+    receiver.pexec(
+        [
+            "python3",
+            "ProcessMain.py",
+            "%i" % payload_size,
+            "%i" % round,
+            "%i" % sim_number,
+        ]
+    )
 
 
 def run_server(server):

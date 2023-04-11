@@ -6,10 +6,17 @@ import sys
 import Evaluation
 import Topology
 
-SIMULATION_FREQUENCY = 5
+# TODO set the following as environment variable
+SIMULATION_NUMBER = 2  # number of simulation for each number of process
+SIMULATION_FREQUENCY = 3  # sec
+MIN_PROC_NUMBER = 4
+MAX_PROC_NUMBER = 8  # suggest to use only even numbers
+
+payload_size = (512, 1024, 2048)
+channel_bandwidth = ()
 
 
-def setup_simulation_environment(simulation_number, processes_number):
+def setup_simulation_environment():
     # clean up folders
     utils.clean_simulation_folder()
 
@@ -17,45 +24,50 @@ def setup_simulation_environment(simulation_number, processes_number):
     utils.set_simulation_logging()
 
     # Create a folder for each simulation
-    utils.create_simulation_folders(simulation_number)
+    utils.create_simulation_folders(
+        payload_size,
+        int((MAX_PROC_NUMBER - MIN_PROC_NUMBER + 2) / 2),
+        SIMULATION_NUMBER,
+    )
 
-    # Write the pair (id,ip) of each process on file
-    utils.write_process_identifier(processes_number)
 
+def start_simulation():
+    for size in payload_size:
+        net = Topology.create_single_network(MIN_PROC_NUMBER)
+        print("#### Single switch topology created\n")
+        print(f"#### Running simulation for payload of {size} Bytes")
 
-def start_simulation(simulations_number, hosts):
-    for i in range(simulations_number):
-        print(f"Running simulation {i+1}")
-        Topology.run_hosts(net, hosts, i + 1)
+        for i in range(MIN_PROC_NUMBER, MAX_PROC_NUMBER + 1, 2):
+            # write new identifiers according to the number of process
+            utils.write_process_identifier(i)
+            print(f"#### Running simulation round with {i} processes")
+            if i != MIN_PROC_NUMBER:
+                net = Topology.add_processes(net, 2)
 
-        # timer used to allow hosts to terminate
-        time.sleep(SIMULATION_FREQUENCY)
+            for j in range(SIMULATION_NUMBER):
+                print(f"## Running simulation {j+1}")
+
+                # TODO Modify with cycle to change payload size
+                payload = utils.generate_payload(size)
+
+                print()
+                Topology.run_hosts(
+                    net, size, int((i - MIN_PROC_NUMBER + 2) / 2), j + 1, payload
+                )
+
+                # timer used to allow hosts to terminate
+                time.sleep(SIMULATION_FREQUENCY)
+
+        time.sleep(2)
+        Topology.free_space(net)
+        time.sleep(5)
+    print("")
 
 
 if __name__ == "__main__":
-    # TODO insert some print to check flow
-    if len(sys.argv) > 3:
-        print("Usage: python Simulation.py <processes number> <simulations number>")
-        exit(-1)
+    eval = Evaluation.Evaluation()
+    setup_simulation_environment()
+    start_simulation()
 
-    elif len(sys.argv) == 3:
-        processes_number = int(sys.argv[1])  # Number of simulated host in the system
-        simulations_number = int(sys.argv[2])  # Number of simulation to execute
-
-        # Clean debug folder and write processes identifier on file
-        # in such a way all processes know each other
-        eval = Evaluation.Evaluation(processes_number, simulations_number)
-        setup_simulation_environment(simulations_number, processes_number)
-
-        # Create a linear topology network with N hosts and N switches
-        net, hosts = Topology.create_linear_network(processes_number)
-        # net, hosts = Topology.create_single_network(processes_number)
-
-        # Run N rounds of simulation
-        start_simulation(simulations_number, hosts)
-
-        # Clean up simulated network TODO
-        Topology.free_space(net)
-
-        # Make performance evaluation with data collected during simulation process
-        eval.create_stats_file(simulations_number)
+    # TODO Make performance evaluation with data collected during simulation process
+    # eval.create_stats_file(simulations_number)

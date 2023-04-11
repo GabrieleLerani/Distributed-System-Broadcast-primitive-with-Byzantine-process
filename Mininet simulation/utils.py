@@ -5,6 +5,8 @@ import logging
 import os
 import shutil
 import csv
+import string
+import random
 
 
 def serialize_json(message):
@@ -42,14 +44,14 @@ def set_simulation_logging():
     )
 
 
-def set_process_logging(sim_num):
+def set_process_logging(payload_size, rnd, sim_num):
     logging.getLogger("pika").setLevel(logging.WARNING)
 
     logging.basicConfig(
         format="%(asctime)s %(levelname)-8s %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
-        filename="simulations/sim{sim_num}/debug_process{ip}.log".format(
-            ip=get_ip_of_interface(), sim_num=sim_num
+        filename="simulations/payload_size{size}/round{round}/exec{sim_num}/debug_process{ip}.log".format(
+            size=payload_size, sim_num=sim_num, round=rnd, ip=get_ip_of_interface()
         ),
         filemode="w",
         level=logging.DEBUG,
@@ -111,15 +113,60 @@ def get_process_list(process_numbers):
     return proc_list
 
 
-def create_simulation_folders(N):
-    for i in range(N):
-        print(f"Creating folder sim{i + 1}")
-        os.mkdir("simulations/sim%i" % (i + 1))
+# def create_simulation_folders(num_size, num_proc, num_sim):
+#     for s in range(1, num_size + 1):
+#         try:
+#             os.mkdir(f"simulations/payload_size{s}")
+
+#             for i in range(1, num_proc + 1):
+#                 try:
+#                     os.mkdir(f"simulations/payload_size{s}/round{i}")
+
+#                     for j in range(1, num_sim + 1):
+#                         try:
+#                             os.mkdir(f"simulations/payload_size{s}/round{i}/exec{j}")
+
+#                         except FileExistsError:
+#                             print(f"simulations/payload_size{s}/round{i}/exec{j}")
+
+#                 except FileExistsError:
+#                     print(f"File simulations/payload_size{s}/round{i} already exists")
+
+#         except FileExistsError:
+#             print(f"File simulations/payload_size{s} already exists")
+
+
+def make_dir(path):
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+
+def create_simulation_folders(payload_sizes, num_procs, num_simulations):
+    for size in payload_sizes:
+        payload_path = f"simulations/payload_size{size}"
+        make_dir(payload_path)
+
+        for proc in range(1, num_procs + 1):
+            proc_path = f"{payload_path}/round{proc}"
+            make_dir(proc_path)
+
+            for sim in range(1, num_simulations + 1):
+                sim_path = f"{proc_path}/exec{sim}"
+                make_dir(sim_path)
+
+
+# generate a random payload of a given size
+def generate_payload(length):
+    letters = string.ascii_lowercase
+    result_str = "".join(random.choice(letters) for i in range(length))
+    return result_str
 
 
 # TODO remove, used for debugging
 if __name__ == "__main__":
     clean_simulation_folder()
-    create_simulation_folders(3)
-    write_process_identifier(3)
+    # create_simulation_folders(7, 8)
+    # write_process_identifier(4)
+
     # read_process_identifier()
+    # generate_payload(1024)
