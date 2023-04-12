@@ -320,6 +320,7 @@ class Process:
                         # so the process receives its own ECHO message before the insertion of the message
                         self.echos_sent.append(["ECHO", source, sequence_number])
                         packet = {"Flag": "ECHO", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
+                        self.update()
                         for i in range(len(self.AL)):
                             self.AL[i].send(packet)
 
