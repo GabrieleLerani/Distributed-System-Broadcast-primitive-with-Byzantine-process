@@ -14,6 +14,7 @@ SERVER_PORT = 5000
 RCV_BUFFER_SIZE = 2048
 BREAK_TIME = 0.1
 
+
 class Process:
     def __init__(self):
         # Sequence number attached to each message
@@ -185,19 +186,23 @@ class Process:
         self.barrier.wait()
 
     # message must be a string
-    def __hash(self, message):
+    @staticmethod
+    def __hash(message):
         return hashlib.sha256(bytes(message, "utf-8")).hexdigest()
+
+    def __add_to_msgsets(self, message):
+        # if the tuple Source,SN is not in MsgSets then you add it with an empty list
+        # that will be filled with next messages
+        if (message["Source"], message["SequenceNumber"]) not in self.MsgSets:
+            self.MsgSets.update({(message["Source"], message["SequenceNumber"]): [message["Message"]]})
+        # if MsgSets contains already that tuple then you add message to the corresponding list
+        else:
+            self.MsgSets[(message["Source"], message["SequenceNumber"])].append(message["Message"])
 
     def receiving_msg(self, message, id):
         # the id is not needed for the check of MSG messages but the function requires it anyway
         if message["Source"] == id and self.first(message, "MSG", id):
-            # if the tuple Source,SN is not in MsgSets then you add it with an empty list
-            # that will be filled with next messages
-            if (message["Source"], message["SequenceNumber"]) not in self.MsgSets:
-                self.MsgSets.update({(message["Source"], message["SequenceNumber"]): [message["Message"]]})
-            # if MsgSets contains already that tuple then you add message to the corresponding list
-            else:
-                self.MsgSets[(message["Source"], message["SequenceNumber"])].append(message["Message"])
+            self.__add_to_msgsets(message)
 
             if self.selfid == 1:
                 self.barrier.wait()
@@ -206,11 +211,11 @@ class Process:
                 self.faulty = math.floor((len(self.ids) - 1) / 3)
 
             # UNCOMMENT THIS SECTION TO BE MORE LOYAL TO THE SPECIFICATION
-            #if ("ECHO", message["Source"], hashed_message, message["SequenceNumber"]) not in self.echo_counter:
+            # if ("ECHO", message["Source"], hashed_message, message["SequenceNumber"]) not in self.echo_counter:
                 # if the counter is not initialized yet then it initializes the counter and assignes the value 1 to it
                 # (because there is the message just received)
             #    self.echo_counter.update({("ECHO", message["Source"], hashed_message, message["SequenceNumber"]): 1})
-            #else:
+            # else:
                 # otherwise it increases its value
             #    self.echo_counter[("ECHO", message["Source"], hashed_message, message["SequenceNumber"])] += 1
 
@@ -226,6 +231,10 @@ class Process:
 
     def receiving_echo(self, echo, id):
         if self.first(echo, "ECHO", id):
+            # Used because there can happen that a process receives self.faulty + 1 ACC messages before
+            # receiving the MSG message and this leads to an error when it tries to retrieve that message from MsgSets
+            self.__add_to_msgsets(echo)
+
             if ("ECHO", echo["Source"], echo["Message"], echo["SequenceNumber"]) not in self.echo_counter:
                 # if the counter is not initialized yet then it initializes the counter and assignes the value 1 to it
                 # (because there is the message just received)
@@ -237,6 +246,10 @@ class Process:
 
     def receiving_acc(self, acc, id):
         if self.first(acc, "ACC", id):
+            # Used because there can happen that a process receives self.faulty + 1 ACC messages before
+            # receiving the MSG message and this leads to an error when it tries to retrieve that message from MsgSets
+            self.__add_to_msgsets(acc)
+
             # in the self.acc_counter, storing the number of accs received is not enough,
             # but you have to store also the ids of the processes that sent them
             # in order to be able to send them a REQ message to get the message that has acc["Message"] as its hash
@@ -253,8 +266,9 @@ class Process:
                 self.acc_counter[("ACC", acc["Source"], acc["Message"], acc["SequenceNumber"])].append(id)
 
             if len(self.acc_counter[("ACC", acc["Source"], acc["Message"], acc["SequenceNumber"])]) == self.faulty + 1:
-                # TODO check because it gives error
+                # The next line is the reason why the class __add_to_msgsets is called also by receiving_echo and receiving_acc
                 msgs = self.MsgSets[(acc["Source"], acc["SequenceNumber"])]
+
                 thereis = False
                 for msg in msgs:
                     if self.__hash(msg) == acc["Message"]:
@@ -283,7 +297,7 @@ class Process:
             for msg in self.MsgSets[(req["Source"], req["SequenceNumber"])]:
                 if self.__hash(msg) == req["Message"]:
                     sel_msg = msg
-                    thereis =True
+                    thereis = True
             if thereis:
                 for i in range(len(self.AL)):
                     if id == self.AL[i].get_id():
@@ -302,7 +316,7 @@ class Process:
                 self.MsgSets[(fwd["Source"], fwd["SequenceNumber"])].append(fwd["Message"])
             self.check(fwd["Source"], self.__hash(fwd["Message"]), fwd["SequenceNumber"])
 
-    def check(self, source, hash, sequence_number):
+    def check(self, source, hash_msg, sequence_number):
         # Ho assunto che ci possano essere messaggi contenuti in MsgSets che sono stati inviati da processi bizantini
         # e che, per qualche motivo, possano avere >= f + 1 riscontri (forse se il bizantino è proprio il mittente
         # originario, anche se andrebbe controllato in quel caso cosa succede all'algoritmo)
@@ -311,26 +325,26 @@ class Process:
             for msg in self.MsgSets[(source, sequence_number)]:
                 print(self.echo_counter, self.echos_rec, self.echos_sent)
                 print(self.acc_counter, self.accs_rec, self.accs_sent)
-                if self.__hash(msg) == hash:
+                if self.__hash(msg) == hash_msg:
 
                     # the two ifs are merged inside only one because there is no action taken without one of them
-                    if self.echo_counter[("ECHO", source, hash, sequence_number)] >= self.faulty + 1 and ["ECHO", source, sequence_number] not in self.echos_sent:
+                    if self.echo_counter[("ECHO", source, hash_msg, sequence_number)] >= self.faulty + 1 and ["ECHO", source, sequence_number] not in self.echos_sent:
                         # It inserts the ECHO sent in the variable so that it is not sent again
                         # It is done before the actual send because sending it to all other nodes is time-consuming,
                         # so the process receives its own ECHO message before the insertion of the message
                         self.echos_sent.append(["ECHO", source, sequence_number])
-                        packet = {"Flag": "ECHO", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
+                        packet = {"Flag": "ECHO", "Source": source, "Message": hash_msg, "SequenceNumber": sequence_number}
                         self.update()
                         for i in range(len(self.AL)):
                             self.AL[i].send(packet)
 
-                    elif self.echo_counter[("ECHO", source, hash, sequence_number)] >= len(self.ips) - self.faulty and ["ACC", source, sequence_number] not in self.accs_sent:
+                    elif self.echo_counter[("ECHO", source, hash_msg, sequence_number)] >= len(self.ips) - self.faulty and ["ACC", source, sequence_number] not in self.accs_sent:
                         print("Echos received: ", self.echos_rec)
                         print("-----ACC PHASE-----")
                         # It is done before the actual send because sending it to all other nodes is time-consuming,
                         # so the process receives its own ACC message before the insertion of the message
                         self.accs_sent.append(["ACC", source, sequence_number])
-                        packet = {"Flag": "ACC", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
+                        packet = {"Flag": "ACC", "Source": source, "Message": hash_msg, "SequenceNumber": sequence_number}
                         for i in range(len(self.AL)):
                             self.AL[i].send(packet)
 
@@ -338,15 +352,15 @@ class Process:
                     # Indeed, if the first condition is not satisfied, the other conditions won't be even evaluated
                     # It is not used before because the check function is called for the first time after receiving an ECHO
                     # TODO check if the above statement is confirmed even with byzantine nodes
-                    elif ("ACC", source, hash, sequence_number) in self.acc_counter and len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= self.faulty + 1 and ["ACC", source, sequence_number] not in self.accs_sent:
+                    elif ("ACC", source, hash_msg, sequence_number) in self.acc_counter and len(self.acc_counter[("ACC", source, hash_msg, sequence_number)]) >= self.faulty + 1 and ["ACC", source, sequence_number] not in self.accs_sent:
                         # Same as before
                         self.accs_sent.append(["ACC", source, sequence_number])
-                        packet = {"Flag": "ACC", "Source": source, "Message": hash, "SequenceNumber": sequence_number}
+                        packet = {"Flag": "ACC", "Source": source, "Message": hash_msg, "SequenceNumber": sequence_number}
                         for i in range(len(self.AL)):
                             self.AL[i].send(packet)
 
                     # Same as before
-                    elif ("ACC", source, hash, sequence_number) in self.acc_counter and len(self.acc_counter[("ACC", source, hash, sequence_number)]) >= len(self.ips) - self.faulty:
+                    elif ("ACC", source, hash_msg, sequence_number) in self.acc_counter and len(self.acc_counter[("ACC", source, hash_msg, sequence_number)]) >= len(self.ips) - self.faulty:
                         print("-----Message Delivered-----")
                         print("-----<", source, msg, sequence_number, ">-----")
 

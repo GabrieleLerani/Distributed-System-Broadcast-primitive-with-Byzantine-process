@@ -1,7 +1,7 @@
 import time
 import Process
 
-TIME_SLEEP = 15
+TIME_SLEEP = 12
 
 
 Role = "Broadcaster"
