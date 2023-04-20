@@ -190,19 +190,16 @@ class Process:
     def __hash(message):
         return hashlib.sha256(bytes(message, "utf-8")).hexdigest()
 
-    def __add_to_msgsets(self, message):
-        # if the tuple Source,SN is not in MsgSets then you add it with an empty list
-        # that will be filled with next messages
-        if (message["Source"], message["SequenceNumber"]) not in self.MsgSets:
-            self.MsgSets.update({(message["Source"], message["SequenceNumber"]): [message["Message"]]})
-        # if MsgSets contains already that tuple then you add message to the corresponding list
-        else:
-            self.MsgSets[(message["Source"], message["SequenceNumber"])].append(message["Message"])
-
     def receiving_msg(self, message, id):
         # the id is not needed for the check of MSG messages but the function requires it anyway
         if message["Source"] == id and self.first(message, "MSG", id):
-            self.__add_to_msgsets(message)
+            # if the tuple Source,SN is not in MsgSets then you add it with an empty list
+            # that will be filled with next messages
+            if (message["Source"], message["SequenceNumber"]) not in self.MsgSets:
+                self.MsgSets.update({(message["Source"], message["SequenceNumber"]): [message["Message"]]})
+            # if MsgSets contains already that tuple then you add message to the corresponding list
+            else:
+                self.MsgSets[(message["Source"], message["SequenceNumber"])].append(message["Message"])
 
             if self.selfid == 1:
                 self.barrier.wait()
@@ -231,10 +228,6 @@ class Process:
 
     def receiving_echo(self, echo, id):
         if self.first(echo, "ECHO", id):
-            # Used because there can happen that a process receives self.faulty + 1 ACC messages before
-            # receiving the MSG message and this leads to an error when it tries to retrieve that message from MsgSets
-            self.__add_to_msgsets(echo)
-
             if ("ECHO", echo["Source"], echo["Message"], echo["SequenceNumber"]) not in self.echo_counter:
                 # if the counter is not initialized yet then it initializes the counter and assignes the value 1 to it
                 # (because there is the message just received)
@@ -246,10 +239,6 @@ class Process:
 
     def receiving_acc(self, acc, id):
         if self.first(acc, "ACC", id):
-            # Used because there can happen that a process receives self.faulty + 1 ACC messages before
-            # receiving the MSG message and this leads to an error when it tries to retrieve that message from MsgSets
-            self.__add_to_msgsets(acc)
-
             # in the self.acc_counter, storing the number of accs received is not enough,
             # but you have to store also the ids of the processes that sent them
             # in order to be able to send them a REQ message to get the message that has acc["Message"] as its hash
@@ -266,13 +255,13 @@ class Process:
                 self.acc_counter[("ACC", acc["Source"], acc["Message"], acc["SequenceNumber"])].append(id)
 
             if len(self.acc_counter[("ACC", acc["Source"], acc["Message"], acc["SequenceNumber"])]) == self.faulty + 1:
-                # The next line is the reason why the class __add_to_msgsets is called also by receiving_echo and receiving_acc
-                msgs = self.MsgSets[(acc["Source"], acc["SequenceNumber"])]
-
                 thereis = False
-                for msg in msgs:
-                    if self.__hash(msg) == acc["Message"]:
-                        thereis = True
+                if (acc["Source"], acc["SequenceNumber"]) in self.MsgSets:
+                    msgs = self.MsgSets[(acc["Source"], acc["SequenceNumber"])]
+
+                    for msg in msgs:
+                        if self.__hash(msg) == acc["Message"]:
+                            thereis = True
                 if not thereis:
                     for i in range(len(self.AL)):
                         for link_id in self.acc_counter[("ACC", acc["Source"], acc["Message"], acc["SequenceNumber"])]:
