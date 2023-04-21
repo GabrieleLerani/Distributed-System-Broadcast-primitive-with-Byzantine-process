@@ -1,25 +1,19 @@
-SELF.CODESET-->{'str(s)+str(H)+str(h)':[c1,c2,c3,...,cn]}
-SELF.MSGSET-->{str(s)+str(h):[(hmac,messages),...,(hmac,messages)]}
+SELF.CodeSet-->{'str(s)+str(H)+str(h)':[c1,c2,c3,...,cn]}
+SELF.MsgSet-->{str(s)+str(h):[list of messages]}
 SELF.COUNTER-->{str(flag)+str(s)+str(H)+str(h):val}
 SELF.HASH-->{'msg':hmac}
 
-MESSAGE{'FLAG':flag,'FROM':from,'S':s}
+MESSAGE{'FLAG':flag,'FROM':from,'SOURCE':source, 'HASH':hash, 'MESSAGE':message / 'C':fragment, 'SEQUENCENUMBER':sequence_number}
 
-SELF.SENTMSG-->{MSG+str(s)+str(h):list of nodes}
-SELF.RECEIVEDMSG-->{MSG+str(s)+str(h):[list of nodes ]}
+SELF.ReceivedMsg-->[FLAG, SOURCE, SEQUENCE NUMBER]
 
-SELF.SENTECHO-->{ECHO+str(s)+str(h):list of nodes}
-SELF.RECEIVEDECHO-->{ECHO+str(s)+str(h):[list of nodes ]}
+SELF.SentECHO-->[FLAG, SOURCE, SEQUENCE NUMBER]
+SELF.RECEIVEDECHO-->{ECHO+str(s)+str(h):[list of nodes]}
 
-
-SELF.SENTACC-->{ACC+str(s)+str(h):list of nodes}
-SELF.RECEIVEDACC-->{ACC+str(s)+str(h):[list of nodes ]}
-
+SELF.SentACC-->[FLAG, SOURCE, SEQUENCE NUMBER]
+SELF.RECEIVEDACC-->{ACC+str(s)+str(h):[list of nodes]}
 
 SELF.SENTREQ-->{REQ+str(s)+str(H)+str(h):list of nodes}
-SELF.RECEIVEDREQ-->{REQ+str(s)+str(h):[list of nodes ]}
+SELF.RECEIVEDREQ-->{REQ+str(s)+str(h):[list of nodes]}
 
-
-#SELF.SENTFWD-->{FWD+str(s)+str(m)+str(h):list of nodes}
-SELF.RECEIVEDFWD-->{FWD+str(s)+str(m)+str(h):[list of nodes ]}
-
+SELF.RECEIVEDFWD-->{FWD+str(s)+str(m)+str(h):[list of nodes]}
