@@ -19,7 +19,7 @@ class AuthenticatedLink:
         self.self_ip = self_ip     # ip of the process that is creating this instance
         self.ip = ip               # ip of the other process
         self.key = {}
-        self.terminating_flag=False   # key exchanged between the two processes
+        self.terminating_flag = False   # key exchanged between the two processes
 
     def get_id(self):
         return self.self_id
@@ -120,14 +120,14 @@ class AuthenticatedLink:
         for value in message.values():
             hmac_input += str(value)
         # This creates the message that will be sent
+
         mess = {}
-        dict_hmac = {"HMAC": hmac.new(
-                    self.key.get(self.id, "Key not found"), hmac_input.encode("utf-8"), hashlib.sha256,).hexdigest(),
-                     }
+        dict_hmac = {"HMAC": hmac.new(self.key.get(self.id, "Key not found"),
+                                      hmac_input.encode("utf-8"), hashlib.sha256,).hexdigest()}
         for key in message.keys():
-            dict_temp = {key: message[key]}   # Adding to the dictionary all the field that
-            mess.update(dict_temp)            # were inside the original message
-        mess.update(dict_hmac)                # Adding to it the HMAC just computed
+            dict_temp = {key: message[key]}  # Adding to the dictionary all the field that
+            mess.update(dict_temp)  # were inside the original message
+        mess.update(dict_hmac)  # Adding to it the HMAC just computed
         return mess
 
     # The SEND opens a new socket, the port is the concatenation of 50/5-
@@ -163,17 +163,25 @@ class AuthenticatedLink:
     def __check_auth(self, message):
         # This creates the string that should match with the HMAC
         hmac_input = ""
+        # TODO
+        if "C" in message.keys():
+            message["C"] = tuple(message["C"])
+
         for value in message.values():
-            hmac_input += str(value)
-        temp_hash = hmac.new(self.key.get(self.id, "Key not found"), hmac_input.encode("utf-8"), hashlib.sha256,)\
-            .hexdigest()
+            if value != message["HMAC"]:
+                hmac_input += str(value)
+
+        temp_hash = hmac.new(self.key.get(self.id, "Key not found"), hmac_input.encode("utf-8"),
+                             hashlib.sha256).hexdigest()
+
         # The HMAC field is always present in the Authenticated Link implementation
         return temp_hash == message["HMAC"]
 
     def __receiving(self, message):
         if not self.__check_auth(message):
             logging.info("--- Authenticity check failed for %s", message)
-            # TODO what do if authenticity check fails??
+            print("Auth check failed")
+            return
 
         # This is the only part of the function that must be changed when using different algorithms
 
