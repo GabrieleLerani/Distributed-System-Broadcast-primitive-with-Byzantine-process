@@ -9,11 +9,11 @@ import string
 import random
 
 
-def has_duplicate(l):
-    if len(l) == len(set(l)):
-        return False
-    else:
-        return True
+# convert list of list in list of tuples
+def list_to_tuple(l):
+    for i in range(len(l)):
+        l[i] = tuple(l[i])
+    return l
 
 
 def serialize_json(message):

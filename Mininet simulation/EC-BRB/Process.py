@@ -1,11 +1,7 @@
 import math
 import hashlib
-
 import AuthenticatedLink
-import socket
 import threading
-import json
-import struct
 import logging
 import utils
 import Evaluation
@@ -14,14 +10,8 @@ from binascii import hexlify
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from Crypto.Protocol.SecretSharing import Shamir
+from base64 import b64encode
 
-from binascii import unhexlify
-from base64 import b64decode, b64encode
-
-SERVER_ID = "192.168.1.40"
-SERVER_PORT = 5000
-
-RCV_BUFFER_SIZE = 1024
 
 BROADCASTER_ID = 1
 
@@ -50,14 +40,14 @@ class Process:
         self.faulty = 0
         self.fragments = []
         self.eval = Evaluation.Evaluation()
+        self.delivered = False
 
-    def connection_to_server(self):
+    def init_process(self):
         self.eval.tracing_start()
         self.init_process_ids()
         self.faulty = math.floor((len(self.ids) - 1) / 3)
         logging.debug("PROCESS: id list: %s,ip list %s", self.ids, self.ips)
-        logging.info("PROCESS:Starting thread on function thread")
-        print("-----GATHERED ALL THE PEERS IPS FROM THE BOOTSTRAP SERVER-----")
+        print("-----GATHERED ALL THE PEERS IPS AND IDS-----")
         print("-----STARTING SENDING OR RECEIVING MESSAGES-----")
 
     def init_process_ids(self):
@@ -77,6 +67,9 @@ class Process:
                 )
             )
             self.AL[i].receiver()
+
+        for i in range(0, len(self.ids)):
+            self.AL[i].key_exchange()
 
     # message must be a string
     @staticmethod
@@ -112,10 +105,9 @@ class Process:
         # Preparation of the Shamir algorithm
         key = get_random_bytes(16)
 
-        # TODO
         shares = Shamir.split(self.faulty + 1, len(self.ips), key)
 
-        # Print shares on logging
+        # write shares on logging
         for idx, share in shares:
             logging.info("PROCESS:Index #%d: %s" % (idx, hexlify(share)))
 
@@ -125,14 +117,13 @@ class Process:
 
         enc_inf_key = str(sid) + str(hash_msg) + str(sn)
 
-        # TODO hash_msg dovrebbe essere l'hash del messaggio (prima c'era una H che non era collegata a nulla)
         self.ENC_INF[enc_inf_key] = [cipher.nonce, tag, ct]
 
         # encode enf inf with latin to allow json dump
         packet = {"FLAG": "ENC_INF", enc_inf_key: []}
         temp_ENC = [cipher.nonce, tag, ct]
         for i in range(len(temp_ENC)):
-            packet[enc_inf_key].append(temp_ENC[i].decode("latin-1"))
+            packet[enc_inf_key].append(list(temp_ENC[i]))
 
         # send nonce tag and ct to other
         for i in range(len(self.ids)):
@@ -141,22 +132,18 @@ class Process:
         emsg = b64encode(cipher.nonce + tag + ct)
         logging.info("PROCESS:%s", emsg)
 
-        if (
-            enc_inf_key
-            # not in self.CodeSet[str(sid) + str(hash_msg) + str(sn)].keys()
-            not in self.CodeSet.keys()
-        ):
+        if enc_inf_key not in self.CodeSet.keys():
             self.CodeSet[enc_inf_key] = []
 
         for i in range(0, len(self.ids)):
             self.fragments.append(shares[i])
-            # self.CodeSet[enc_inf_key].append(shares[i]) TODO
 
     def decrypt(self, C, s, h, H):
         # create a 4 data block with 2 parity block code generator
 
-        # C must be a list of tuples like (index,share)
+        C = utils.list_to_tuple(C)
 
+        # C must be a list of tuples like (index,share)
         key = Shamir.combine(C)
 
         # TODO process which is not the sender has self.ENC_INF empty
@@ -166,7 +153,7 @@ class Process:
             result = cipher.decrypt(self.ENC_INF[str(s) + str(H) + str(h)][2])
             cipher.verify(tag)
             logging.info("Result of decryption: %s", result)
-            print("---- Result of decryption: ", result)
+
             return result
         except ValueError:
             print("The shares were incorrect")
@@ -206,15 +193,17 @@ class Process:
         for i in range(len(self.ids)):
             number = self.fragments[i][0]
 
-            share = self.fragments[i][1].decode("latin-1")
+            # convert the byte sequence of each fragment to a list so to ease
+            # sending process and encoding
+            share = list(self.fragments[i][1])
 
             message_to_send = {
                 "FLAG": "MSG",
                 "FROM": str(self.selfid),
                 "SOURCE": str(self.selfid),
                 "HASH": self.__hash(message),
-                "C": (number, share),
-                "SEQUENCENUMBER": self.h,
+                "C": [number, share],
+                "SEQUENCENUMBER": str(self.h),
             }
 
             self.AL[i].send(message_to_send)
@@ -228,7 +217,6 @@ class Process:
         # MESSAGE{'FLAG':flag,'FROM':from,'S':s}
         # id == 1 checks that the delivery is computed with the sender s that by convention it's the first
         # s is meant for the broadcaster or for the source of the message it changes something?
-        print("---- MSG received", msg)
 
         if (
             msg["FROM"] == msg["SOURCE"]
@@ -253,12 +241,9 @@ class Process:
             if src_hash_sn not in self.CodeSet.keys():
                 self.CodeSet[src_hash_sn] = []
 
-            if (msg["C"][0], msg["C"][1].encode("latin-1")) not in self.CodeSet[
-                src_hash_sn
-            ]:
-                self.CodeSet[src_hash_sn].append(
-                    (msg["C"][0], msg["C"][1].encode("latin-1"))
-                )
+            # TODO FOR ENCODING
+            if (msg["C"][0], bytes(msg["C"][1])) not in self.CodeSet[src_hash_sn]:
+                self.CodeSet[src_hash_sn].append((msg["C"][0], bytes(msg["C"][1])))
 
             echo_s_hash_H = (
                 str("ECHO")
@@ -268,12 +253,9 @@ class Process:
             )
             self.COUNTER.setdefault(echo_s_hash_H, 0)
 
-            self.COUNTER[echo_s_hash_H] += 1
-
             if ["ECHO", msg["SOURCE"], msg["SEQUENCENUMBER"]] not in self.SentECHO:
                 self.SentECHO.append(["ECHO", msg["SOURCE"], msg["SEQUENCENUMBER"]])
 
-                print("----- APPENDING ECHO", self.SentECHO)
                 number = msg["C"][0]
                 share = msg["C"][1]
 
@@ -282,15 +264,12 @@ class Process:
                     "FROM": str(self.selfid),
                     "SOURCE": str(msg["SOURCE"]),
                     "HASH": str(msg["HASH"]),
-                    "C": (number, share),
+                    "C": [number, share],
                     "SEQUENCENUMBER": str(msg["SEQUENCENUMBER"]),
                 }
 
                 for i in range(len(self.ids)):
                     self.AL[i].send(packet)
-                    print("SENDING ECHO IN DELIVER MSG", threading.currentThread())
-
-                self.barrier.wait()
 
     def deliver_echo(self, msg):
         flag_src_sn = str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
@@ -322,12 +301,8 @@ class Process:
             if src_hash_sn not in self.CodeSet.keys():
                 self.CodeSet[src_hash_sn] = []
 
-            if (msg["C"][0], msg["C"][1].encode("latin-1")) not in self.CodeSet[
-                src_hash_sn
-            ]:
-                self.CodeSet[src_hash_sn].append(
-                    (msg["C"][0], msg["C"][1].encode("latin-1"))
-                )
+            if (msg["C"][0], bytes(msg["C"][1])) not in self.CodeSet[src_hash_sn]:
+                self.CodeSet[src_hash_sn].append((msg["C"][0], bytes(msg["C"][1])))
 
             if (
                 self.COUNTER[
@@ -377,56 +352,38 @@ class Process:
             self.check(msg["SOURCE"], msg["HASH"], msg["SEQUENCENUMBER"])
 
     def deliver_acc(self, msg):
-        if (
-            str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-            not in self.RECEIVEDACC.keys()
-        ):
-            self.RECEIVEDACC[
-                str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-            ] = []
+        flag_src_sn = str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
 
-        if (
-            msg["FROM"]
-            not in self.RECEIVEDACC[
-                str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-            ]
-        ):
-            self.RECEIVEDACC[
-                str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-            ].append(msg["FROM"])
+        if flag_src_sn not in self.RECEIVEDACC.keys():
+            self.RECEIVEDACC[flag_src_sn] = []
+
+        if msg["FROM"] not in self.RECEIVEDACC[flag_src_sn]:
+            self.RECEIVEDACC[flag_src_sn].append(msg["FROM"])
 
             # used to avoid key error, set default value of 0 for that key
-            self.COUNTER.setdefault(
-                str(msg["FLAG"])
-                + str(msg["SOURCE"])
-                + str(msg["HASH"])
-                + str(msg["SEQUENCENUMBER"]),
-                0,
-            )
-
-            self.COUNTER[
+            flag_src_hash_sn = (
                 str(msg["FLAG"])
                 + str(msg["SOURCE"])
                 + str(msg["HASH"])
                 + str(msg["SEQUENCENUMBER"])
-            ] += 1
+            )
 
-            if (
-                self.COUNTER[
-                    str(msg["FLAG"])
-                    + str(msg["SOURCE"])
-                    + str(msg["HASH"])
-                    + str(msg["SEQUENCENUMBER"])
-                ]
-                >= self.faulty + 1
-            ):
+            self.COUNTER.setdefault(
+                flag_src_hash_sn,
+                0,
+            )
+
+            self.COUNTER[flag_src_hash_sn] += 1
+
+            if self.COUNTER[flag_src_hash_sn] >= self.faulty + 1:
                 there_is = False
-                if (
-                    str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-                    not in self.MsgSet.keys()
-                ):
-                    self.MsgSet[str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])] = []
-                for j in self.MsgSet[str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])]:
+
+                src_sn = str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
+
+                if src_sn not in self.MsgSet.keys():
+                    self.MsgSet[src_sn] = []
+
+                for j in self.MsgSet[src_sn]:
                     if self.__hash(j) == str(msg["HASH"]):
                         there_is = True
                         break
@@ -439,65 +396,39 @@ class Process:
                         "SEQUENCENUMBER": str(msg["SEQUENCENUMBER"]),
                     }
                     for j in range(0, len(self.ids)):
-                        if (
+                        req_src_hash_sn = (
                             "REQ"
                             + str(msg["SOURCE"])
                             + str(msg["HASH"])
                             + str(msg["SEQUENCENUMBER"])
-                            not in self.SENTREQ.keys()
-                        ):
-                            self.SENTREQ[
-                                "REQ"
-                                + str(msg["SOURCE"])
-                                + str(msg["HASH"])
-                                + str(msg["SEQUENCENUMBER"])
-                            ] = []
-                        if (
-                            str(j + 1)
-                            not in self.SENTREQ[
-                                "REQ"
-                                + str(msg["SOURCE"])
-                                + str(msg["HASH"])
-                                + str(msg["SEQUENCENUMBER"])
-                            ].values()
-                        ):
+                        )
+
+                        if req_src_hash_sn not in self.SENTREQ.keys():
+                            self.SENTREQ[req_src_hash_sn] = []
+                        if str(j + 1) not in self.SENTREQ[req_src_hash_sn]:
                             # j + 1 is used both above and below because it is the real id of another process
-                            self.SENTREQ[
-                                "REQ"
-                                + str(msg["SOURCE"])
-                                + str(msg["HASH"])
-                                + str(msg["SEQUENCENUMBER"])
-                            ].append(str(j + 1))
+                            self.SENTREQ[req_src_hash_sn].append(str(j + 1))
                             self.AL[j].send(packet)
 
-            # TODO Questa riga dovrebbe essere sbagliata proprio nell'algoritmo
-            self.check(msg["FROM"], msg["HASH"], msg["SEQUENCENUMBER"])
+            # The following row should be wrong in the original algorithm
+            # self.check(msg["FROM"], msg["HASH"], msg["SEQUENCENUMBER"])
+            self.check(msg["SOURCE"], msg["HASH"], msg["SEQUENCENUMBER"])
 
     def deliver_req(self, msg):
-        if (
-            str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-            not in self.RECEIVEDREQ.keys()
-        ):
-            self.RECEIVEDREQ[
-                str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-            ] = []
-        if (
-            msg["FROM"]
-            not in self.RECEIVEDREQ[
-                str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-            ]
-        ):
-            self.RECEIVEDREQ[
-                str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-            ].append(msg["FROM"])
+        flag_src_sn = str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
+
+        if flag_src_sn not in self.RECEIVEDREQ.keys():
+            self.RECEIVEDREQ[flag_src_sn] = []
+
+        if msg["FROM"] not in self.RECEIVEDREQ[flag_src_sn]:
+            self.RECEIVEDREQ[flag_src_sn].append(msg["FROM"])
             there_is = False
             message = ""
-            if (
-                str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-                not in self.MsgSet.keys()
-            ):
-                self.MsgSet[str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])] = []
-            for j in self.MsgSet[str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])]:
+
+            src_sn = str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
+            if src_sn not in self.MsgSet.keys():
+                self.MsgSet[src_sn] = []
+            for j in self.MsgSet[src_sn]:
                 if self.__hash(j) == str(msg["HASH"]):
                     there_is = True
                     message = j
@@ -519,57 +450,29 @@ class Process:
 
     def deliver_fwd(self, msg):
         hash_msg = self.__hash(msg["MESSAGE"])
-        if (
+        flag_src_hash_msg = (
             str(msg["FLAG"])
             + str(msg["SOURCE"])
             + str(hash_msg)
             + str(msg["SEQUENCENUMBER"])
-            not in self.SENTREQ.keys()
-        ):
-            self.SENTREQ[
-                str(msg["FLAG"])
-                + str(msg["SOURCE"])
-                + str(hash_msg)
-                + str(msg["SEQUENCENUMBER"])
-            ] = []
+        )
+
+        if flag_src_hash_msg not in self.SENTREQ.keys():
+            self.SENTREQ[flag_src_hash_msg] = []
         # msg['FROM'] is the real id of the process
-        if (
-            msg["FROM"]
-            in self.SENTREQ[
-                str(msg["FLAG"])
-                + str(msg["SOURCE"])
-                + str(hash_msg)
-                + str(msg["SEQUENCENUMBER"])
-            ].values()
-        ):
-            if (
+        if msg["FROM"] in self.SENTREQ[flag_src_hash_msg]:
+            flag_src_msg_sn = (
                 str(msg["FLAG"])
                 + str(msg["SOURCE"])
                 + str(msg["MESSAGE"])
                 + str(msg["SEQUENCENUMBER"])
-                not in self.RECEIVEDFWD.keys()
-            ):
-                self.RECEIVEDFWD[
-                    str(msg["FLAG"])
-                    + str(msg["SOURCE"])
-                    + str(msg["MESSAGE"])
-                    + str(msg["SEQUENCENUMBER"])
-                ] = []
-            if (
-                msg["FROM"]
-                not in self.RECEIVEDFWD[
-                    str(msg["FLAG"])
-                    + str(msg["SOURCE"])
-                    + str(msg["MESSAGE"])
-                    + str(msg["SEQUENCENUMBER"])
-                ]
-            ):
-                self.RECEIVEDFWD[
-                    str(msg["FLAG"])
-                    + str(msg["SOURCE"])
-                    + str(msg["MESSAGE"])
-                    + str(msg["SEQUENCENUMBER"])
-                ].append(str(msg["FROM"]))
+            )
+
+            if flag_src_msg_sn not in self.RECEIVEDFWD.keys():
+                self.RECEIVEDFWD[flag_src_msg_sn] = []
+            if msg["FROM"] not in self.RECEIVEDFWD[flag_src_msg_sn]:
+                self.RECEIVEDFWD[flag_src_msg_sn].append(str(msg["FROM"]))
+
                 self.MsgSet[str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])].append(
                     msg["MESSAGE"]
                 )
@@ -579,6 +482,7 @@ class Process:
     def check(self, s, hash_msg, sn):
         there_is = False
         message = ""
+
         if str(s) + str(sn) not in self.MsgSet.keys():
             self.MsgSet[str(s) + str(sn)] = []
         for j in self.MsgSet[str(s) + str(sn)]:
@@ -592,14 +496,15 @@ class Process:
                 >= self.faulty + 1
                 and ["ECHO", str(s), str(sn)] not in self.SentECHO
             ):
-                self.SentECHO.append(["ECHO", s, sn])
+                self.SentECHO.append(["ECHO", str(s), str(sn)])
 
                 number = 0
                 share = ""
                 for elem in self.CodeSet[str(s) + str(hash_msg) + str(sn)]:
                     if elem[0] == self.selfid:
                         number = elem[0]
-                        share = elem[1].decode("latin-1")
+                        # share = elem[1].decode("latin-1")
+                        share = list(elem[1])
                         break
 
                 for i in range(len(self.ids)):
@@ -608,10 +513,10 @@ class Process:
                         "FROM": str(self.selfid),
                         "SOURCE": str(s),
                         "HASH": str(hash_msg),
-                        "C": (number, share),
+                        "C": [number, share],
                         "SEQUENCENUMBER": str(sn),
                     }
-                    print("SENDING ECHO IN CHECK", threading.current_thread())
+
                     self.AL[i].send(packet)
 
             elif (
@@ -631,8 +536,10 @@ class Process:
                     }
                     self.AL[i].send(packet)
 
+            # TODO
             elif (
-                self.COUNTER["ACC" + str(s) + str(hash_msg) + str(sn)]
+                "ACC" + str(s) + str(hash_msg) + str(sn) in self.COUNTER.keys()
+                and self.COUNTER["ACC" + str(s) + str(hash_msg) + str(sn)]
                 >= self.faulty + 1
                 and ["ACC", str(s), str(sn)] not in self.SentACC
             ):
@@ -649,11 +556,14 @@ class Process:
                     self.AL[i].send(packet)
 
             elif (
-                self.COUNTER["ACC" + str(s) + str(hash_msg) + str(sn)]
+                "ACC" + str(s) + str(hash_msg) + str(sn) in self.COUNTER.keys()
+                and self.COUNTER["ACC" + str(s) + str(hash_msg) + str(sn)]
                 >= len(self.ids) - self.faulty
             ):
                 msg = {"SOURCE": s, "MESSAGE": message, "SEQUENCENUMBER": sn}
-                self.__deliver(msg["MESSAGE"])
+                if not self.delivered:
+                    self.delivered = True
+                    self.__deliver(msg["MESSAGE"])
 
     def deliver_enc_inf(self, msg):
         # decode message
@@ -661,7 +571,8 @@ class Process:
         dict_key = list(msg.keys())[0]
 
         for i in range(len(msg[dict_key])):
-            msg[dict_key][i] = msg[dict_key][i].encode("latin-1")
+            # msg[dict_key][i] = msg[dict_key][i].encode("latin-1")
+            msg[dict_key][i] = bytes(msg[dict_key][i])
 
         self.ENC_INF[dict_key] = msg[dict_key]
 

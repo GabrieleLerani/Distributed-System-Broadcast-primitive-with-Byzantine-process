@@ -3,10 +3,7 @@ import hashlib
 import hmac
 import json
 import logging
-import utils
 from threading import Thread
-
-
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
 RCV_BUFFER_SIZE = 16384
@@ -22,6 +19,32 @@ class AuthenticatedLink:
         self.ip = ip  # ip of the other process
         self.key = {}
         self.terminating_flag = False  # key exchanged between the two processes
+        self.sending_port = (
+            int("50" + str(self.self_id) + str(self.id))
+            if self.self_id < 10 and self.id < 10
+            else int("5" + str(self.self_id) + str(self.id))
+        )
+        self.receiving_port = (
+            int("50" + str(self.id) + str(self.self_id))
+            if self.self_id < 10 and self.id < 10
+            else int("5" + str(self.id) + str(self.self_id))
+        )
+
+    def key_exchange(self):
+        # It uses ternary operator
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            while True:
+                # Try Except used to repeat the connection until the other socket is opened again
+                try:
+                    self.sock.connect((self.ip, self.sending_port))
+
+                    self.__check(self.sock, self.id)
+
+                    break
+                except ConnectionRefusedError:
+                    continue
 
     def get_id(self):
         return self.self_id
@@ -35,16 +58,10 @@ class AuthenticatedLink:
     def __receive(self):  # TODO modify ACC flag
         ready = False
         host = ""  # Symbolic name meaning all available interfaces
-        # It uses ternary operator
-        port = (
-            int("50" + str(self.id) + str(self.self_id))
-            if self.self_id < 10 and self.id < 10
-            else int("5" + str(self.id) + str(self.self_id))
-        )
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s:
             self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.s.bind((host, port))
+            self.s.bind((host, self.receiving_port))
             self.s.listen(0)
             while True:
                 conn, addr = self.s.accept()
@@ -55,10 +72,13 @@ class AuthenticatedLink:
                         if not data:
                             break
 
+                        # TODO sometimes gives an error of extra data
+                        # print(f"--- PARSED DATA: {data.decode()}")
                         parsed_data = json.loads(data.decode())
 
                         logging.info("Message received by %s: %s", self.ip, parsed_data)
 
+                        # Receive and store the key
                         if "FLAG" not in parsed_data.keys():
                             self.__add_key(parsed_data)
                             conn.sendall(b"synACK")
@@ -82,7 +102,7 @@ class AuthenticatedLink:
                             # it may mean that it did not receive the message at all,
                             # so it may ask you about the message associated to the ACC that it received
                             # (indeed, you will send / sent an ACC message to it too)
-                            if self.terminating_flag:
+                            if "ACC" in parsed_data.values():
                                 ready = True
 
                 if ready:
@@ -95,16 +115,18 @@ class AuthenticatedLink:
             "AUTH: <%s, %d> is the one with this key: %s", self.ip, self.id, self.key
         )
 
-    def __check(self, idn):
-        if idn not in self.key:
+    # check if there is the key for the other process
+    def __check(self, sock, idn):
+        # A process sends a key only if it is identified by a lower id resepect to receiver
+        if idn not in self.key and self.self_id <= idn:
             self.key[idn] = ChaCha20Poly1305.generate_key()
 
             key_to_send = {"KEY": self.key[idn].decode("latin1")}
             logging.info("AUTH: Key generated")
 
             data = json.dumps(key_to_send)
-            self.sock.sendall(data.encode())
-            self.temp = self.sock.recv(RCV_BUFFER_SIZE, 0).decode()
+            sock.sendall(data.encode())
+            self.temp = sock.recv(RCV_BUFFER_SIZE, 0).decode()
 
             if self.temp != "synACK":  # Ack used for synchronization with other process
                 return 1
@@ -112,8 +134,9 @@ class AuthenticatedLink:
     # Compute the hmac of the message with the key exchanged
     # The message is returned as a dictionary: {"FLAG": flag, "MSG": message, ... "HMAC": hmac}
     # The hmac is computed starting from the concatenation of all the fields in the message
-    def __auth(self, message):
-        self.__check(self.id)
+    def __auth(self, sock, message):
+        self.__check(sock, self.id)
+
         # This creates the string that will be authenticated
         hmac_input = ""
         for value in message.values():
@@ -123,7 +146,8 @@ class AuthenticatedLink:
         mess = {}
         dict_hmac = {
             "HMAC": hmac.new(
-                self.key.get(self.id, "Key not found"),
+                self.key[self.id],
+                # self.key.get(self.id, "Key not found"),
                 hmac_input.encode("utf-8"),
                 hashlib.sha256,
             ).hexdigest(),
@@ -134,28 +158,24 @@ class AuthenticatedLink:
             }  # Adding to the dictionary all the field that
             mess.update(dict_temp)  # were inside the original message
         mess.update(dict_hmac)  # Adding to it the HMAC just computed
+
         return mess
 
-    # The SEND opens a new socket, the port is the concatenation of 50/5-
+    # SEND opens a new socket, the port is the concatenation of 50/5-
     # id of sending process - id of receiving process
     # Example: sending_id = 1, receiving_id = 2 ---> port = 5012
     def send(self, message):
         # It uses ternary operator
-        port = (
-            int("50" + str(self.self_id) + str(self.id))
-            if self.self_id < 10 and self.id < 10
-            else int("5" + str(self.self_id) + str(self.id))
-        )
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             while True:
                 # Try Except used to repeat the connection until the other socket is opened again
                 try:
-                    self.sock.connect((self.ip, port))
+                    self.sock.connect((self.ip, self.sending_port))
 
                     # mess is a dictionary that contains the original packet plus the HMAC
-                    mess = self.__auth(message)
+                    mess = self.__auth(self.sock, message)
 
                     parsed_data = json.dumps(mess)
 
@@ -170,16 +190,12 @@ class AuthenticatedLink:
 
         hmac_input = ""
 
-        # TODO
-        if "C" in message.keys():
-            message["C"] = tuple(message["C"])
-
         for value in message.values():
             if value != message["HMAC"]:
-                hmac_input += str(value)
+                hmac_input += str(value)  # TODO
 
         temp_hash = hmac.new(
-            self.key.get(self.id, "Key not found"),
+            self.key[self.id],
             hmac_input.encode("utf-8"),
             hashlib.sha256,
         ).hexdigest()
@@ -190,7 +206,7 @@ class AuthenticatedLink:
     def __receiving(self, message):
         if not self.__check_auth(message):
             logging.info("--- Authenticity check failed for %s", message)
-            print("Auth check failed")
+            print("Authenticity check failed")
             return
 
         # This is the only part of the function that must be changed when using different algorithms
