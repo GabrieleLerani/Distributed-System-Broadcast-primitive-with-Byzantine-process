@@ -3,8 +3,8 @@ import hashlib
 import hmac
 import json
 import logging
+import time
 from threading import Thread
-
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
 RCV_BUFFER_SIZE = 16384
@@ -19,6 +19,34 @@ class AuthenticatedLink:
         self.self_ip = self_ip  # ip of the process that is creating this instance
         self.ip = ip  # ip of the other process
         self.key = {}  # key exchanged between the two processes
+        self.terminating_flag = False  # key exchanged between the two processes
+        self.sending_port = (
+            int("50" + str(self.self_id) + str(self.id))
+            if self.self_id < 10 and self.id < 10
+            else int("5" + str(self.self_id) + str(self.id))
+        )
+        self.receiving_port = (
+            int("50" + str(self.id) + str(self.self_id))
+            if self.self_id < 10 and self.id < 10
+            else int("5" + str(self.id) + str(self.self_id))
+        )
+        
+
+    def key_exchange(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            while True:
+                # Try Except used to repeat the connection until the other socket is opened again
+                try:
+                    self.sock.connect((self.ip, self.sending_port))
+
+                    self.__check(self.id,self.sock)
+
+                    break
+                except ConnectionRefusedError:
+                    continue
+
+
 
     def get_id(self):
         return self.self_id
@@ -33,23 +61,24 @@ class AuthenticatedLink:
         ready = False
         host = ""  # Symbolic name meaning all available interfaces
         # It uses ternary operator
-        port = (
-            int("50" + str(self.id) + str(self.self_id))
-            if self.self_id < 10 and self.id < 10
-            else int("5" + str(self.id) + str(self.self_id))
-        )
-
+        
         # useful to check which connection is being created
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s:
+                
             self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.s.bind((host, port))
+            self.s.bind((host, self.receiving_port))
             self.s.listen(0)
+            
             while True:
+                
                 conn, addr = self.s.accept()
 
                 with conn:
+
                     while True:
+                        
+
                         data = conn.recv(RCV_BUFFER_SIZE)
                         if not data:
                             break
@@ -67,6 +96,7 @@ class AuthenticatedLink:
                                 args=(parsed_data,),
                             )
                             t.start()
+
                             # The last part must be changed because the closing factor for the socket is different
                             # for every protocol
 
@@ -83,19 +113,22 @@ class AuthenticatedLink:
                             # (indeed, you will send / sent an ACC message to it too)
                             if "ACC" in parsed_data.values():
                                 ready = True
-
+                                # time.sleep(0.02) # TODO but used to avoid ConnectionRefused
+                                        
                 if ready:
                     break
+    
+
 
     def __add_key(self, key_dict):
         self.key[self.id] = key_dict["KEY"].encode("latin1")
-
+        
         logging.info(
             "AUTH: <%s, %d> is the one with this key: %s", self.ip, self.id, self.key
         )
 
     def __check(self, idn, sock):
-        if idn not in self.key:
+        if idn not in self.key and self.self_id <= idn:
             self.key[idn] = ChaCha20Poly1305.generate_key()
 
             key_to_send = {"KEY": self.key[idn].decode("latin1")}
@@ -104,7 +137,7 @@ class AuthenticatedLink:
             data = json.dumps(key_to_send)
             sock.sendall(data.encode())
             temp = sock.recv(RCV_BUFFER_SIZE, 0).decode()
-
+            
             if temp != "synACK":  # Ack used for synchronization with other process
                 return 1
 
@@ -139,36 +172,42 @@ class AuthenticatedLink:
     # Example: sending_id = 1, receiving_id = 2 ---> port = 5012
     def send(self, message):
         # It uses ternary operator
-        port = (
-            int("50" + str(self.self_id) + str(self.id))
-            if self.self_id < 10 and self.id < 10
-            else int("5" + str(self.self_id) + str(self.id))
-        )
-
+        
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             while True:
                 # Try Except used to repeat the connection until the other socket is opened again
                 try:
-                    sock.connect((self.ip, port))
+                    sock.connect((self.ip, self.sending_port))
 
                     # mess is a dictionary that contains the original packet plus the HMAC
                     mess = self.__auth(message, sock)
 
                     logging.info("%s sento to <%s,%d>", mess, self.ip, self.id)
 
+                    
                     parsed_data = json.dumps(mess)
                     sock.sendall(bytes(parsed_data, encoding="utf-8"))
                     break
-                except ConnectionRefusedError:
-                    continue
+                # TODO 
+                # except ConnectionRefusedError:
+                #     print(f"Connection refused while sending {message}\nTrying to reconnect to <{self.ip,self.sending_port}>")
+                    
+                #     #continue
+                #     return
+                # except ConnectionResetError:
+                #     print(f"Connection error when sending message to <{self.ip,self.id}>")
+                #     return
+                except:
+                    break
 
     # It checks message authenticity comparing the hmac
     def __check_auth(self, message):
         # This creates the string that should match with the HMAC
         hmac_input = ""
         for value in message.values():
-            hmac_input += str(value)
+            if value != message["HMAC"]:
+                hmac_input += str(value)
         temp_hash = hmac.new(
             self.key.get(self.id, "Key not found"),
             hmac_input.encode("utf-8"),
@@ -178,16 +217,16 @@ class AuthenticatedLink:
         return temp_hash == message["HMAC"]
 
     def __receiving(self, message):
-        flag = message["Flag"]
-
+        
         if not self.__check_auth(message):
             logging.info("--- Authenticity check failed for %s", message)
-            # TODO what do if authenticity check fails??
-
+            print("Authenticity check failed ")
+            return
         # This is the only part of the function that must be changed when using different algorithms
 
         # this is done in order to pass to the upper layer only the part that it requires
         # indeed, the HMAC is removed because it is useful only for this level
+        flag = message["Flag"]
         message.pop("HMAC", None)
 
         if flag == "MSG":

@@ -15,14 +15,14 @@ if __name__ == "__main__":
 
         utils.set_process_logging(0, 0, 0)
         p = Process.Process()
-        p.connection_to_server()
+        p.init_process()
         p.creation_links()
         time.sleep(TIME_SLEEP)
         p.broadcast("Hello!")
     else:
         utils.set_process_logging(0, 0, 0)
         p = Process.Process()
-        p.connection_to_server()
+        p.init_process()
         p.creation_links()
 
     exit(0)

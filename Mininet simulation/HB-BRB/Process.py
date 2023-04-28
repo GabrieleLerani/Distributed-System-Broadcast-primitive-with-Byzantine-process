@@ -1,18 +1,12 @@
 import hashlib
-import pika as pika
 import AuthenticatedLink
-import socket
 import threading
-import json
-import struct
 import logging
 import math
 import utils
 import time
 import Evaluation
-import sys
-import os
-import signal
+
 
 SERVER_ID = "192.168.1.41"
 SERVER_PORT = 5000
@@ -44,72 +38,22 @@ class Process:
         # not the association with other values
         self.accs_rec = []
         self.accs_sent = []
-
         self.reqs_rec = []
         self.reqs_sent = []
-
         self.fwds_rec = []
-
         self.faulty = 0
-        # counter of echos of a specific message received
-        self.echo_counter = {}
+        self.echo_counter = {} # counter of echos of a specific message received
         self.acc_counter = {}
         self.eval = Evaluation.Evaluation()
+        self.delivered = False
 
-    def connection_to_server(self):
-        # # It starts a connection to the server to obtain a port number
-        # print("-----CONNECTING TO SERVER...-----")
-        # with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        #     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        #     s.connect((SERVER_ID, SERVER_PORT))
-        #     mess = bytes("Hello", "utf-8")
-        #     s.sendall(mess)
-        #     data = s.recv(RCV_BUFFER_SIZE).decode()
-        #     # print(sys.stderr, "This is the port given by the server: " + data)
-        #     logging.debug("PROCESS:This is the port given by the server: %s", data)
-        # port = 5000 + int(data)
-        # print("-----CONNECTION TO SERVER SUCCESSFULLY CREATED-----")
-        # with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        #     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        #     sock.connect((SERVER_ID, port))
-        #     mess = bytes("Hello", "utf-8")
-        #     sock.sendall(mess)
-        #     while True:
-        #         # receive the length prefix (4 bytes in network byte order)
-        #         len_prefix = sock.recv(4)
-        #         if not len_prefix:
-        #             break
-
-        #         # unpack the length prefix into an integer
-        #         msg_len = struct.unpack("!I", len_prefix)[0]
-        #         # receive the JSON object data
-        #         json_data = b""
-        #         while len(json_data) < msg_len:
-        #             packet = sock.recv(msg_len - len(json_data))
-        #             if not packet:
-        #                 break
-        #             json_data += packet
-
-        #         # parse the JSON object
-        #         obj = json.loads(json_data.decode("utf-8"))
-
-        #         # Add IP and ID to list
-        #         if isinstance(obj, dict):
-        #             self.ids.append(obj.get("ID", "Not found"))
-        #             self.ips.append(obj.get("IP", "Not found"))
-        #         # END is str so isinstance of obj returns false
-        #         else:
-        #             break
-
+    def init_process(self):
+       
         self.eval.tracing_start()
-
-        # Populate ids ips from file
         self.init_process_ids()
         self.faulty = math.floor((len(self.ids) - 1) / 3)
-
         logging.debug("PROCESS: id list: %s,ip list %s", self.ids, self.ips)
-
-        print("-----GATHERED ALL THE PEERS IPS FROM THE BOOTSTRAP SERVER-----")
+        print("-----GATHERED ALL THE PEERS IPS AND IDS-----")
         print("-----STARTING SENDING OR RECEIVING MESSAGES-----")
 
     def init_process_ids(self):
@@ -129,73 +73,16 @@ class Process:
                 )
             )
             self.AL[i].receiver()
+        
+        for i in range(0, len(self.ids)):
+            self.AL[i].key_exchange()
 
     # Before starting broadcast, a process reads the ip addresses and ids of
     # the other processes from its queue
-    def update(self):
-        with pika.BlockingConnection(
-            pika.ConnectionParameters(host=SERVER_ID)
-        ) as connection:
-            channel = connection.channel()
-
-            response = channel.queue_declare(queue=str(self.selfid))
-            # Get the queue length (number of not consumed messages)
-            num = response.method.message_count
-
-            logging.info(
-                "PROCESS: %d,%s --- My queue length: %d", self.selfid, self.selfip, num
-            )
-
-            if num == 0:
-                channel.close()
-                return
-
-            self.counter = 0
-
-            def callback(ch, method, properties, body):
-                logging.info("PROCESS: [x] Received %r", body)
-                queue_msg = body.decode("utf-8")
-                temp = queue_msg.split("#")
-                ip_from_queue = temp[0]
-                id_from_queue = temp[1]
-                if ip_from_queue not in self.ips:
-                    self.ips.append(ip_from_queue)
-                    self.ids.append(int(id_from_queue))
-                    self.AL.append(
-                        AuthenticatedLink.AuthenticatedLink(
-                            self.selfid,
-                            self.selfip,
-                            self.ids[len(self.ids) - 1],
-                            self.ips[len(self.ips) - 1],
-                            self,
-                        )
-                    )
-                    self.AL[len(self.AL) - 1].receiver()
-                self.counter += 1
-                if self.counter == num:
-                    channel.stop_consuming()
-                    channel.close()
-
-            channel.basic_consume(
-                queue=str(self.selfid), on_message_callback=callback, auto_ack=True
-            )
-            channel.start_consuming()
+    
 
     def broadcast(self, message):
-        # self.update()
-        # self.faulty = math.floor((len(self.ids) - 1) / 3)
-        # for j in range(len(self.AL), len(self.ids)):
-        #     self.AL.append(
-        #         AuthenticatedLink.AuthenticatedLink(
-        #             self.selfid,
-        #             self.selfip,
-        #             self.ids[j],
-        #             self.ips[j],
-        #             self,
-        #         )
-        #     )
-        #     self.AL[j].receiver()
-
+        
         logging.info(
             "----- EVALUATION CHECKPOINT: broadcast start, time: %s -----",
             time.time() * 1000,
@@ -237,7 +124,7 @@ class Process:
             if self.selfid == 1:
                 self.barrier.wait()
             else:
-                # self.update()
+                
                 self.faulty = math.floor((len(self.ids) - 1) / 3)
 
             # UNCOMMENT THIS SECTION TO BE MORE LOYAL TO THE SPECIFICATION
@@ -262,7 +149,7 @@ class Process:
                 )
                 hashed_message = self.__hash(message["Message"])
 
-                # TODO Test byzantine messages
+                
                 packet = {}
                 if self.selfid == 2:
                     byz_mess = "byz mess"
@@ -536,20 +423,26 @@ class Process:
                     ) >= len(
                         self.ips
                     ) - self.faulty:
-                        print(
-                            f"-----Message Delivered: {msg}-----",
-                        )
+                        
+                        if not self.delivered:
+                            
+                            self.delivered = True
+                            print(
+                                f"-----Message Delivered: {msg}-----",
+                            )
 
-                        peak = self.eval.tracing_mem()
-                        logging.info(
-                            "-----MESSAGE DELIVERED, time: %s, size: %s",
-                            time.time() * 1000,
-                            peak,
-                        )
+                            peak = self.eval.tracing_mem()
+                            logging.info(
+                                "-----MESSAGE DELIVERED, time: %s, size: %s",
+                                time.time() * 1000,
+                                peak,
+                            )
 
-                        logging.info(
-                            "----- <%s,%s,%d> -----", source, msg, sequence_number
-                        )
+                            logging.info(
+                                "----- <%s,%s,%d> -----", source, msg, sequence_number
+                            )
+
+
 
     def first(self, message, flag, sender):
         if flag == "MSG":
