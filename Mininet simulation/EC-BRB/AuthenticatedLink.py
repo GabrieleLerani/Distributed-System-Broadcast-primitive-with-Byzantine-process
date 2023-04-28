@@ -31,8 +31,6 @@ class AuthenticatedLink:
         )
 
     def key_exchange(self):
-        # It uses ternary operator
-
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             while True:
@@ -182,8 +180,10 @@ class AuthenticatedLink:
                     self.sock.sendall(bytes(parsed_data, encoding="utf-8"))
                     logging.info("%s sent to <%s,%d>", mess, self.ip, self.id)
                     break
-                except ConnectionRefusedError:
-                    continue
+                # except ConnectionRefusedError:
+                #     continue
+                except:
+                    return
 
     def __check_auth(self, message):
         # This creates the string that should match with the HMAC
