@@ -1,0 +1,6 @@
+pycryptodome
+cryptography
+netifaces
+numpy
+pandas
+matplotlib
