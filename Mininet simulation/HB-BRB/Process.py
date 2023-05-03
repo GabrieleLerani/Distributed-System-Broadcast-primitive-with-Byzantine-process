@@ -6,6 +6,7 @@ import math
 import utils
 import time
 import Evaluation
+import os
 
 
 SERVER_ID = "192.168.1.41"
@@ -55,6 +56,7 @@ class Process:
         logging.debug("PROCESS: id list: %s,ip list %s", self.ids, self.ips)
         print("-----GATHERED ALL THE PEERS IPS AND IDS-----")
         print("-----STARTING SENDING OR RECEIVING MESSAGES-----")
+        print(f"{os.getpid()}")
 
     def init_process_ids(self):
         processes = utils.read_process_identifier()
@@ -74,11 +76,17 @@ class Process:
             )
             self.AL[i].receiver()
         
+        # this is a real key exchange but is cpu consuming due to connection refused error
+        # because the processes are not initialized at the same time and the receiving sockets ar not
+        # perfectly synchronized
         for i in range(0, len(self.ids)):
             self.AL[i].key_exchange()
 
-    # Before starting broadcast, a process reads the ip addresses and ids of
-    # the other processes from its queue
+
+        # to ease simulation process reads symmetric key from file
+        
+
+
     
 
     def broadcast(self, message):
@@ -151,7 +159,8 @@ class Process:
 
                 
                 packet = {}
-                if self.selfid == 2:
+                # TODO used to send byzantine message
+                if self.selfid == 10:
                     byz_mess = "byz mess"
 
                     packet = {
@@ -335,14 +344,16 @@ class Process:
         if (source, sequence_number) in self.MsgSets:
             for msg in self.MsgSets[(source, sequence_number)]:
                 logging.info(
-                    "ECHOS COUNTER: %s, ECHOS RECEIVED:%s ECHOS RECEIVED: %s",
+                    "ECHOS COUNTER: %s, ECHOS RECEIVED:%s ECHOS SENT: %s",
                     self.echo_counter,
                     self.echos_rec,
                     self.echos_sent,
+                    
                 )
+                logging.info("MSG SET %s",self.MsgSets)
 
                 logging.info(
-                    "ACC COUNTER: %s, ACC RECEIVED:%s ACC RECEIVED: %s",
+                    "ACC COUNTER: %s, ACC RECEIVED:%s ACC SENT: %s",
                     self.acc_counter,
                     self.accs_rec,
                     self.accs_sent,
@@ -427,6 +438,7 @@ class Process:
                         if not self.delivered:
                             
                             self.delivered = True
+
                             print(
                                 f"-----Message Delivered: {msg}-----",
                             )
@@ -437,6 +449,8 @@ class Process:
                                 time.time() * 1000,
                                 peak,
                             )
+
+
 
                             logging.info(
                                 "----- <%s,%s,%d> -----", source, msg, sequence_number

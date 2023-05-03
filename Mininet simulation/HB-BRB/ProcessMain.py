@@ -2,6 +2,8 @@ import time
 import Process
 import sys
 import utils
+import signal
+import os
 
 TIME_SLEEP = 8
 
@@ -15,14 +17,22 @@ if __name__ == "__main__":
 
         utils.set_process_logging(0, 0, 0)
         p = Process.Process()
+
         p.init_process()
         p.creation_links()
         time.sleep(TIME_SLEEP)
-        p.broadcast("Hello!")
+        p.broadcast(message)
+        utils.end_app(os.getpid(),4)
+        
+
     else:
         utils.set_process_logging(0, 0, 0)
         p = Process.Process()
         p.init_process()
         p.creation_links()
+        utils.end_app(os.getpid(),15)
+        
 
     exit(0)
+
+

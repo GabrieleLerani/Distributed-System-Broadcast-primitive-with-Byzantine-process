@@ -4,12 +4,18 @@ import hmac
 import json
 import logging
 import time
+import threading
+import sys
+import os
+import signal
+import utils
 from threading import Thread
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
 RCV_BUFFER_SIZE = 16384
 KEY_SIZE = 32
 
+KEY_EXCHANGE = 0 # 1
 
 class AuthenticatedLink:
     def __init__(self, self_id, self_ip, idn, ip, proc):
@@ -31,21 +37,25 @@ class AuthenticatedLink:
             else int("5" + str(self.id) + str(self.self_id))
         )
         
-
+    # TODO make choise with YAML file
     def key_exchange(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
-            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            while True:
-                # Try Except used to repeat the connection until the other socket is opened again
-                try:
-                    self.sock.connect((self.ip, self.sending_port))
+        if KEY_EXCHANGE == 1:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                while True:
+                    # Try Except used to repeat the connection until the other socket is opened again
+                    try:
+                        self.sock.connect((self.ip, self.sending_port))
 
-                    self.__check(self.id,self.sock)
+                        self.__check(self.id,self.sock)
 
-                    break
-                except ConnectionRefusedError:
-                    continue
-
+                        break
+                    except ConnectionRefusedError:
+                        
+                        continue
+        else:  
+             self.key[self.id] = utils.read_key(self.self_id, self.id)
+        
 
 
     def get_id(self):
@@ -111,14 +121,31 @@ class AuthenticatedLink:
                             # it may mean that it did not receive the message at all,
                             # so it may ask you about the message associated to the ACC that it received
                             # (indeed, you will send / sent an ACC message to it too)
+                            
+
                             if "ACC" in parsed_data.values():
-                                ready = True
-                                # time.sleep(0.02) # TODO but used to avoid ConnectionRefused
+                                for first_list in self.proc.MsgSets.values():
+                                    for message in  first_list:
+                                        temp = self.__hash(message)
+                                        
+                                        if parsed_data["Message"] == temp:
+                                            ready = True
+
+                                            # for t in threading.enumerate():
+                                            #     print("--- thread",t.getName())
+
+                                            print(f"--- PROC:{self.id}")
+                                            break
+                                
                                         
                 if ready:
                     break
-    
 
+        
+    # Only for this protocol
+    @staticmethod
+    def __hash(message):
+        return hashlib.sha256(bytes(message, "utf-8")).hexdigest()
 
     def __add_key(self, key_dict):
         self.key[self.id] = key_dict["KEY"].encode("latin1")
@@ -199,7 +226,7 @@ class AuthenticatedLink:
                 #     print(f"Connection error when sending message to <{self.ip,self.id}>")
                 #     return
                 except:
-                    break
+                    continue
 
     # It checks message authenticity comparing the hmac
     def __check_auth(self, message):

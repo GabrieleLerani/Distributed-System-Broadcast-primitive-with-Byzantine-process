@@ -7,7 +7,38 @@ import shutil
 import csv
 import string
 import random
+import signal
+import time
+from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
+# TODO used only for simulations, normally processes should share keys with socket
+def create_keys(n):
+    
+    with open("symmetric_keys.csv", "w", newline="") as file:
+        writer = csv.writer(file)
+        
+        keys = {}
+        for i in range(1,n + 1):
+            for j in range(1, n + 1):
+                if (i,j) not in keys and (j,i) not in keys:
+                    symm_key = ChaCha20Poly1305.generate_key().decode("latin1")
+                    keys[(i,j)] = symm_key
+                    writer.writerow([i,j,keys[i,j]])
+                    
+def read_key(id_p1,id_p2):
+    with open("symmetric_keys.csv", "r", newline="") as file:
+        reader = csv.reader(file)
+        for row in reader:
+            if id_p1 == row[0] and id_p2 == row[1] :
+                return row[2].encode("latin-1")  
+            
+            
+
+
+def end_app(pid,time):
+    time.sleep(time)
+    os.kill(pid, signal.SIGTERM)
+        
 
 def serialize_json(message):
     # serialize
@@ -142,5 +173,8 @@ def generate_payload(length):
 
 # TODO remove, used for debugging
 if __name__ == "__main__":
-    clean_simulation_folder()
-    write_process_identifier(4)
+    # clean_simulation_folder()
+    # write_process_identifier(4)
+    
+    create_keys(6)
+    read_keys()
