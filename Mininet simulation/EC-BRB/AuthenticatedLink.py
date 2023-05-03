@@ -18,7 +18,6 @@ class AuthenticatedLink:
         self.self_ip = self_ip  # ip of the process that is creating this instance
         self.ip = ip  # ip of the other process
         self.key = {}
-        self.terminating_flag = False  # key exchanged between the two processes
         self.sending_port = (
             int("50" + str(self.self_id) + str(self.id))
             if self.self_id < 10 and self.id < 10
@@ -124,9 +123,9 @@ class AuthenticatedLink:
 
             data = json.dumps(key_to_send)
             sock.sendall(data.encode())
-            self.temp = sock.recv(RCV_BUFFER_SIZE, 0).decode()
+            temp = sock.recv(RCV_BUFFER_SIZE, 0).decode()
 
-            if self.temp != "synACK":  # Ack used for synchronization with other process
+            if temp != "synACK":  # Ack used for synchronization with other process
                 return 1
 
     # Compute the hmac of the message with the key exchanged
@@ -183,7 +182,7 @@ class AuthenticatedLink:
                 # except ConnectionRefusedError:
                 #     continue
                 except:
-                    return
+                    return  # TODO
 
     def __check_auth(self, message):
         # This creates the string that should match with the HMAC
@@ -192,7 +191,7 @@ class AuthenticatedLink:
 
         for value in message.values():
             if value != message["HMAC"]:
-                hmac_input += str(value)  # TODO
+                hmac_input += str(value)
 
         temp_hash = hmac.new(
             self.key[self.id],

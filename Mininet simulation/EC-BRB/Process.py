@@ -28,7 +28,6 @@ class Process:
         self.MsgSet = {}
         self.COUNTER = {}
         self.CodeSet = {}
-        # self.SENTMSG = {}   # Variabile non richiesta
         self.ReceivedMsg = []  # List instead of dictionary
         self.SentECHO = []  # List instead of dictionary
         self.RECEIVEDECHO = {}

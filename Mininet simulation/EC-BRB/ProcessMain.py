@@ -27,5 +27,3 @@ if __name__ == "__main__":
         p.creation_links()
 
     exit(0)
-
-    # print(Process.Process().get_powerset([(1, 2), (1, 3)]))
