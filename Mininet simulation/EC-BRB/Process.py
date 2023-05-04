@@ -6,7 +6,8 @@ import logging
 import utils
 import Evaluation
 import time
-from binascii import hexlify
+import itertools
+from binascii import hexlify, unhexlify
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from Crypto.Protocol.SecretSharing import Shamir
@@ -40,6 +41,7 @@ class Process:
         self.fragments = []
         self.eval = Evaluation.Evaluation()
         self.delivered = False
+        self.bit_echo = False
 
     def init_process(self):
         self.eval.tracing_start()
@@ -151,30 +153,10 @@ class Process:
         try:
             result = cipher.decrypt(self.ENC_INF[str(s) + str(H) + str(h)][2])
             cipher.verify(tag)
-            logging.info("Result of decryption: %s", result)
 
             return result
         except ValueError:
             print("The shares were incorrect")
-
-    # The function returns all the subsets of the list passed as a parameter
-    # [1, 2, 3] -> [[1], [2], [3], [1, 2], [1, 3], [1, 2, 3]]
-    def get_powerset(self, some_list):
-        if len(some_list) == 0:
-            return [[]]
-
-        subsets = []
-        first_element = some_list[0]
-        remaining_list = some_list[1:]
-        # Strategy: get all the subsets of remaining_list. For each
-        # of those subsets, a full subset list will contain both
-        # the original subset as well as a version of the subset
-        # that contains first_element
-        for partial_subset in self.get_powerset(remaining_list):
-            subsets.append(partial_subset)
-            subsets.append(partial_subset[:] + [first_element])
-
-        return subsets
 
     def broadcast(self, message):
         logging.info(
@@ -207,9 +189,6 @@ class Process:
 
             self.AL[i].send(message_to_send)
 
-            # if 'MSG'+str(message['S'])+str(h) not in self.SENTMSG.keys():   # Queste linee di codice non dovrebbero
-            #     self.SENTMSG['MSG'+str(message['S'])+str(h)] = []           # essere richieste dall'algoritmo
-            # self.SENTMSG['MSG'+str(message['S'])+str(h)].append(str(i+1))   # lui considera solo i msg ricevuti
         self.barrier.wait()
 
     def deliver_msg(self, msg):
@@ -271,8 +250,9 @@ class Process:
                     self.AL[i].send(packet)
 
     def deliver_echo(self, msg):
-        flag_src_sn = str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
+        self.bit_echo = True
 
+        flag_src_sn = str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
         if flag_src_sn not in self.RECEIVEDECHO.keys():
             self.RECEIVEDECHO[flag_src_sn] = []
 
@@ -300,6 +280,7 @@ class Process:
             if src_hash_sn not in self.CodeSet.keys():
                 self.CodeSet[src_hash_sn] = []
 
+            print("----", msg["C"][1])
             if (msg["C"][0], bytes(msg["C"][1])) not in self.CodeSet[src_hash_sn]:
                 self.CodeSet[src_hash_sn].append((msg["C"][0], bytes(msg["C"][1])))
 
@@ -321,17 +302,25 @@ class Process:
                     if self.__hash(j) == str(msg["HASH"]):
                         there_is = True
                         break
+
                 if not there_is:
                     # checking condition and why j
+                    # src_hash_from = (
+                    #     str(msg["SOURCE"]) + str(msg["HASH"]) + str(msg["FROM"])
+                    # )
                     src_hash_from = (
-                        str(msg["SOURCE"]) + str(msg["HASH"]) + str(msg["FROM"])
+                        str(msg["SOURCE"])
+                        + str(msg["HASH"])
+                        + str(msg["SEQUENCENUMBER"])
                     )
+
                     if src_hash_from not in self.CodeSet.keys():
                         self.CodeSet[src_hash_from] = []
 
                     subset = self.CodeSet[src_hash_from]
 
                     c = self.get_powerset(subset)
+                    # c = list(itertools.combinations(subset, self.faulty + 1))
 
                     for l in c:
                         if len(l) == self.faulty + 1:  # and not utils.has_duplicate(l):
@@ -347,8 +336,12 @@ class Process:
                                 self.MsgSet[
                                     str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
                                 ].append(m)
+                                break
+
+            self.bit_echo = False
 
             self.check(msg["SOURCE"], msg["HASH"], msg["SEQUENCENUMBER"])
+        self.bit_echo = False
 
     def deliver_acc(self, msg):
         flag_src_sn = str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
@@ -381,6 +374,9 @@ class Process:
 
                 if src_sn not in self.MsgSet.keys():
                     self.MsgSet[src_sn] = []
+
+                while self.bit_echo:
+                    pass
 
                 for j in self.MsgSet[src_sn]:
                     if self.__hash(j) == str(msg["HASH"]):
@@ -584,3 +580,20 @@ class Process:
             time.time() * 1000,
             peak,
         )
+
+    def get_powerset(self, some_list):
+        if len(some_list) == 0:
+            return [[]]
+
+        subsets = []
+        first_element = some_list[0]
+        remaining_list = some_list[1:]
+        # Strategy: get all the subsets of remaining_list. For each
+        # of those subsets, a full subset list will contain both
+        # the original subset as well as a version of the subset
+        # that contains first_element
+        for partial_subset in self.get_powerset(remaining_list):
+            subsets.append(partial_subset)
+            subsets.append(partial_subset[:] + [first_element])
+
+        return subsets

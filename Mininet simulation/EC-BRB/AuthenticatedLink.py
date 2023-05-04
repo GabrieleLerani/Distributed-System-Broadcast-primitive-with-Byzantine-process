@@ -3,11 +3,17 @@ import hashlib
 import hmac
 import json
 import logging
+import utils
+import time
 from threading import Thread
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
 RCV_BUFFER_SIZE = 16384
 KEY_SIZE = 32
+
+# Change to one if you want keys from file, use 0 if you want a real key exchange
+# key = 1 is used to avoid connection refused error during simulation
+KEY_EXCHANGE = 0
 
 
 class AuthenticatedLink:
@@ -28,20 +34,24 @@ class AuthenticatedLink:
             if self.self_id < 10 and self.id < 10
             else int("5" + str(self.id) + str(self.self_id))
         )
+        self.written = False  # used to avoid rewriting evaluation checkpoint
 
     def key_exchange(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
-            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            while True:
-                # Try Except used to repeat the connection until the other socket is opened again
-                try:
-                    self.sock.connect((self.ip, self.sending_port))
+        if KEY_EXCHANGE == 1:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                while True:
+                    # Try Except used to repeat the connection until the other socket is opened again
+                    try:
+                        self.sock.connect((self.ip, self.sending_port))
 
-                    self.__check(self.sock, self.id)
+                        self.__check(self.id, self.sock)
 
-                    break
-                except ConnectionRefusedError:
-                    continue
+                        break
+                    except ConnectionRefusedError:
+                        continue
+        else:
+            self.key[self.id] = utils.get_key(self.self_id, self.id)
 
     def get_id(self):
         return self.self_id
@@ -65,45 +75,82 @@ class AuthenticatedLink:
 
                 with conn:
                     while True:
-                        data = conn.recv(RCV_BUFFER_SIZE)
-                        if not data:
-                            break
+                        try:
+                            data = conn.recv(RCV_BUFFER_SIZE)
+                            if not data:
+                                break
 
-                        # TODO sometimes gives an error of extra data
-                        # print(f"--- PARSED DATA: {data.decode()}")
-                        parsed_data = json.loads(data.decode())
+                            # TODO sometimes gives an error of extra data
+                            # print(f"--- PARSED DATA: {data.decode()}")
+                            # parsed_data = json.loads(data.decode())
 
-                        logging.info("Message received by %s: %s", self.ip, parsed_data)
+                            parsed_data = {}
+                            for obj in utils.decode_json(data.decode()):
+                                parsed_data = obj
 
-                        # Receive and store the key
-                        if "FLAG" not in parsed_data.keys():
-                            self.__add_key(parsed_data)
-                            conn.sendall(b"synACK")
-                        else:
-                            t = Thread(
-                                target=self.__receiving,
-                                args=(parsed_data,),
+                            if not self.written:
+                                logging.info(
+                                    "----- EVALUATION CHECKPOINT: message receiving, time: %s -----",
+                                    time.time() * 1000,
+                                )
+                                self.written = True
+
+                            logging.info(
+                                "Message received by %s: %s", self.ip, parsed_data
                             )
-                            t.start()
-                            # The last part must be changed because the closing factor for the socket is different
-                            # for every protocol
 
-                            # if you receive an ACC for some message M from some other process,
-                            # it means that it received at least n-f ECHOs for that message M,
-                            # so it is safe to close the socket with it
-                            # (it received at least f+1 ECHOs from correct processes,
-                            # so it is impossible that it will send a REQ message;
-                            # in fact, even if it receives the same message from all the faulty processes
-                            # it will not send it because they are at most f)
-                            # Otherwise, if you don't receive an ACC from someone,
-                            # it may mean that it did not receive the message at all,
-                            # so it may ask you about the message associated to the ACC that it received
-                            # (indeed, you will send / sent an ACC message to it too)
-                            if "ACC" in parsed_data.values():
-                                ready = True
+                            # Receive and store the key
+                            if "FLAG" not in parsed_data.keys():
+                                self.__add_key(parsed_data)
+                                conn.sendall(b"synACK")
+                            else:
+                                t = Thread(
+                                    target=self.__receiving,
+                                    args=(parsed_data,),
+                                )
+                                t.start()
+                                # The last part must be changed because the closing factor for the socket is different
+                                # for every protocol
 
-                if ready:
-                    break
+                                # if you receive an ACC for some message M from some other process,
+                                # it means that it received at least n-f ECHOs for that message M,
+                                # so it is safe to close the socket with it
+                                # (it received at least f+1 ECHOs from correct processes,
+                                # so it is impossible that it will send a REQ message;
+                                # in fact, even if it receives the same message from all the faulty processes
+                                # it will not send it because they are at most f)
+                                # Otherwise, if you don't receive an ACC from someone,
+                                # it may mean that it did not receive the message at all,
+                                # so it may ask you about the message associated to the ACC that it received
+                                # (indeed, you will send / sent an ACC message to it too)
+
+                                # TODO
+                                # if "ACC" in parsed_data.values():
+                                #     ready = True
+
+                                # if "ACC" in parsed_data.values():
+                                #     # print(
+                                #     #     f"---{self.proc.MsgSet.values()}\n,---{parsed_data}"
+                                #     # )
+
+                                #     for first_list in self.proc.MsgSet.values():
+                                #         for message in first_list:
+                                #             temp = self.__hash(message)
+
+                                #             if parsed_data["HASH"] == temp:
+                                #                 ready = True
+                                #                 break
+
+                        except ConnectionResetError:
+                            print(f"Error: Connection reset by <{self.id,self.ip}>")
+
+                    # TODO
+                    # if ready:
+                    #     break
+
+    @staticmethod
+    def __hash(message):
+        return hashlib.sha256(bytes(str(message), "utf-8")).hexdigest()
 
     def __add_key(self, key_dict):
         self.key[self.id] = key_dict["KEY"].encode("latin1")
