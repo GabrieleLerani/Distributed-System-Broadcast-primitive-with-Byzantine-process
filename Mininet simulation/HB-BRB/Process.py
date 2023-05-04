@@ -6,13 +6,9 @@ import math
 import utils
 import time
 import Evaluation
-import os
 
 
-SERVER_ID = "192.168.1.41"
-SERVER_PORT = 5000
-
-RCV_BUFFER_SIZE = 4096
+RCV_BUFFER_SIZE = 16384
 BREAK_TIME = 0.1
 
 BROADCAST_ID = 1
@@ -56,7 +52,7 @@ class Process:
         logging.debug("PROCESS: id list: %s,ip list %s", self.ids, self.ips)
         print("-----GATHERED ALL THE PEERS IPS AND IDS-----")
         print("-----STARTING SENDING OR RECEIVING MESSAGES-----")
-        print(f"{os.getpid()}")
+        
 
     def init_process_ids(self):
         processes = utils.read_process_identifier()
@@ -252,12 +248,14 @@ class Process:
                 # The next line is the reason why the class __add_to_msgsets is called also by receiving_echo and receiving_acc
 
                 thereis = False
-                if (acc["Source"], acc["SequenceNumber"]) in self.MsgSets:
-                    msgs = self.MsgSets[(acc["Source"], acc["SequenceNumber"])]
+                if (acc["Source"], acc["SequenceNumber"]) not in self.MsgSets:
+                    self.MsgSets[(acc["Source"], acc["SequenceNumber"])] = []
 
-                    for msg in msgs:
-                        if self.__hash(msg) == acc["Message"]:
-                            thereis = True
+                msgs = self.MsgSets[(acc["Source"], acc["SequenceNumber"])]
+
+                for msg in msgs:
+                    if self.__hash(msg) == acc["Message"]:
+                        thereis = True
                 if not thereis:
                     for i in range(len(self.AL)):
                         for link_id in self.acc_counter[

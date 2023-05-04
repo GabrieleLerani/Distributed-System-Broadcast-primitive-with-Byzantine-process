@@ -4,10 +4,6 @@ import hmac
 import json
 import logging
 import time
-import threading
-import sys
-import os
-import signal
 import utils
 from threading import Thread
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
@@ -36,6 +32,7 @@ class AuthenticatedLink:
             if self.self_id < 10 and self.id < 10
             else int("5" + str(self.id) + str(self.self_id))
         )
+        self.written = False
         
     # TODO make choise with YAML file
     def key_exchange(self):
@@ -54,7 +51,7 @@ class AuthenticatedLink:
                         
                         continue
         else:  
-             self.key[self.id] = utils.read_key(self.self_id, self.id)
+             self.key[self.id] = utils.get_key(self.self_id, self.id)
         
 
 
@@ -95,6 +92,13 @@ class AuthenticatedLink:
 
                         parsed_data = json.loads(data.decode())
 
+                        if not self.written:
+                            logging.info(
+                                "----- EVALUATION CHECKPOINT: message receiving, time: %s -----",
+                                time.time() * 1000,
+                            )
+                            self.written = True
+
                         logging.info("Message received by %s: %s", self.ip, parsed_data)
 
                         if "Flag" not in parsed_data.keys():
@@ -130,14 +134,8 @@ class AuthenticatedLink:
                                         
                                         if parsed_data["Message"] == temp:
                                             ready = True
-
-                                            # for t in threading.enumerate():
-                                            #     print("--- thread",t.getName())
-
-                                            print(f"--- PROC:{self.id}")
                                             break
-                                
-                                        
+                                                                        
                 if ready:
                     break
 
@@ -172,7 +170,7 @@ class AuthenticatedLink:
     # The message is returned as a dictionary: {"FLAG": flag, "MSG": message, ... "HMAC": hmac}
     # The hmac is computed starting from the concatenation of all the fields in the message
     def __auth(self, message, sock):
-        self.__check(self.id, sock)
+        # self.__check(self.id, sock)
         # This creates the string that will be authenticated
         hmac_input = ""
         for value in message.values():
@@ -216,15 +214,7 @@ class AuthenticatedLink:
                     parsed_data = json.dumps(mess)
                     sock.sendall(bytes(parsed_data, encoding="utf-8"))
                     break
-                # TODO 
-                # except ConnectionRefusedError:
-                #     print(f"Connection refused while sending {message}\nTrying to reconnect to <{self.ip,self.sending_port}>")
-                    
-                #     #continue
-                #     return
-                # except ConnectionResetError:
-                #     print(f"Connection error when sending message to <{self.ip,self.id}>")
-                #     return
+                
                 except:
                     continue
 
