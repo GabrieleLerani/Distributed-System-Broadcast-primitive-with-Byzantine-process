@@ -12,11 +12,6 @@
 
 	sudo apt install python3.7-distutils
 
-
-4)Install pyDistAlgo library for python3.7
- 
-	python3.7 -m pip install pyDistAlgo
-
 Docker RabbitMQ
 
 1)Start the Docker with RabbitMQ
