@@ -12,6 +12,8 @@ RCV_BUFFER_SIZE = 16384
 BREAK_TIME = 0.1
 
 BROADCAST_ID = 1
+DROP_ECHO_ID = 3
+DROP_MSG_ID = 10
 
 
 class Process:
@@ -37,22 +39,21 @@ class Process:
         self.accs_sent = []
         self.reqs_rec = []
         self.reqs_sent = []
+        self.reqs_sent_counter = []
         self.fwds_rec = []
         self.faulty = 0
-        self.echo_counter = {} # counter of echos of a specific message received
+        self.echo_counter = {}  # counter of echos of a specific message received
         self.acc_counter = {}
         self.eval = Evaluation.Evaluation()
         self.delivered = False
 
     def init_process(self):
-       
         self.eval.tracing_start()
         self.init_process_ids()
         self.faulty = math.floor((len(self.ids) - 1) / 3)
         logging.debug("PROCESS: id list: %s,ip list %s", self.ids, self.ips)
         print("-----GATHERED ALL THE PEERS IPS AND IDS-----")
         print("-----STARTING SENDING OR RECEIVING MESSAGES-----")
-        
 
     def init_process_ids(self):
         processes = utils.read_process_identifier()
@@ -71,22 +72,16 @@ class Process:
                 )
             )
             self.AL[i].receiver()
-        
+
         # this is a real key exchange but is cpu consuming due to connection refused error
         # because the processes are not initialized at the same time and the receiving sockets ar not
         # perfectly synchronized
         for i in range(0, len(self.ids)):
             self.AL[i].key_exchange()
 
-
         # to ease simulation process reads symmetric key from file
-        
-
-
-    
 
     def broadcast(self, message):
-        
         logging.info(
             "----- EVALUATION CHECKPOINT: broadcast start, time: %s -----",
             time.time() * 1000,
@@ -110,102 +105,113 @@ class Process:
 
     def receiving_msg(self, message, id):
         # the id is not needed for the check of MSG messages but the function requires it anyway
-        if message["Source"] == BROADCAST_ID and self.first(message, "MSG", id):
-            if (message["Source"], message["SequenceNumber"]) not in self.MsgSets:
-                self.MsgSets.update(
-                    {
-                        (message["Source"], message["SequenceNumber"]): [
-                            message["Message"]
-                        ]
-                    }
-                )
-            # if MsgSets contains already that tuple then you add message to the corresponding list
-            else:
-                self.MsgSets[(message["Source"], message["SequenceNumber"])].append(
-                    message["Message"]
-                )
+        if self.selfid != DROP_MSG_ID:
+            if message["Source"] == BROADCAST_ID and self.first(message, "MSG", id):
+                if (message["Source"], message["SequenceNumber"]) not in self.MsgSets:
+                    self.MsgSets.update(
+                        {
+                            (message["Source"], message["SequenceNumber"]): [
+                                message["Message"]
+                            ]
+                        }
+                    )
 
-            if self.selfid == 1:
-                self.barrier.wait()
-            else:
-                
-                self.faulty = math.floor((len(self.ids) - 1) / 3)
-
-            # UNCOMMENT THIS SECTION TO BE MORE LOYAL TO THE SPECIFICATION
-            # if ("ECHO", message["Source"], hashed_message, message["SequenceNumber"]) not in self.echo_counter:
-            # if the counter is not initialized yet then it initializes the counter and assignes the value 1 to it
-            # (because there is the message just received)
-            #    self.echo_counter.update({("ECHO", message["Source"], hashed_message, message["SequenceNumber"]): 1})
-            # else:
-            # otherwise it increases its value
-            #    self.echo_counter[("ECHO", message["Source"], hashed_message, message["SequenceNumber"])] += 1
-
-            if [
-                "ECHO",
-                message["Source"],
-                message["SequenceNumber"],
-            ] not in self.echos_sent:
-                # It inserts the ECHO sent in the variable so that it is not sent again
-                # It is done before the actual send because sending it to all other nodes is time-consuming,
-                # so the process receives its own ECHO message before the insertion of the message
-                self.echos_sent.append(
-                    ["ECHO", message["Source"], message["SequenceNumber"]]
-                )
-                hashed_message = self.__hash(message["Message"])
-
-                
-                packet = {}
-                # TODO used to send byzantine message
-                if self.selfid == 10:
-                    byz_mess = "byz mess"
-
-                    packet = {
-                        "Flag": "ECHO",
-                        "Source": message["Source"],
-                        "Message": byz_mess,
-                        "SequenceNumber": message["SequenceNumber"],
-                    }
-
+                # if MsgSets contains already that tuple then you add message to the corresponding list
                 else:
-                    packet = {
-                        "Flag": "ECHO",
-                        "Source": message["Source"],
-                        "Message": hashed_message,
-                        "SequenceNumber": message["SequenceNumber"],
-                    }
+                    self.MsgSets[(message["Source"], message["SequenceNumber"])].append(
+                        message["Message"]
+                    )
 
-                for i in range(len(self.AL)):
-                    self.AL[i].send(packet)
+                if self.selfid == 1:
+                    self.barrier.wait()
+                else:
+                    self.faulty = math.floor((len(self.ids) - 1) / 3)
 
-    def receiving_echo(self, echo, id):
-        if self.first(echo, "ECHO", id):
-            # Used because there can happen that a process receives self.faulty + 1 ACC messages before
-            # receiving the MSG message and this leads to an error when it tries to retrieve that message from MsgSets
-
-            if (
-                "ECHO",
-                echo["Source"],
-                echo["Message"],
-                echo["SequenceNumber"],
-            ) not in self.echo_counter:
+                # UNCOMMENT THIS SECTION TO BE MORE LOYAL TO THE SPECIFICATION
+                # if ("ECHO", message["Source"], hashed_message, message["SequenceNumber"]) not in self.echo_counter:
                 # if the counter is not initialized yet then it initializes the counter and assignes the value 1 to it
                 # (because there is the message just received)
-                self.echo_counter.update(
-                    {
+                #    self.echo_counter.update({("ECHO", message["Source"], hashed_message, message["SequenceNumber"]): 1})
+                # else:
+                # otherwise it increases its value
+                #    self.echo_counter[("ECHO", message["Source"], hashed_message, message["SequenceNumber"])] += 1
+
+                if [
+                    "ECHO",
+                    message["Source"],
+                    message["SequenceNumber"],
+                ] not in self.echos_sent:
+                    # It inserts the ECHO sent in the variable so that it is not sent again
+                    # It is done before the actual send because sending it to all other nodes is time-consuming,
+                    # so the process receives its own ECHO message before the insertion of the message
+                    self.echos_sent.append(
+                        ["ECHO", message["Source"], message["SequenceNumber"]]
+                    )
+                    hashed_message = self.__hash(message["Message"])
+
+                    packet = {}
+                    # TODO used to send byzantine message
+                    if self.selfid == 10:
+                        byz_mess = "byz mess"
+
+                        packet = {
+                            "Flag": "ECHO",
+                            "Source": message["Source"],
+                            "Message": byz_mess,
+                            "SequenceNumber": message["SequenceNumber"],
+                        }
+
+                    else:
+                        packet = {
+                            "Flag": "ECHO",
+                            "Source": message["Source"],
+                            "Message": hashed_message,
+                            "SequenceNumber": message["SequenceNumber"],
+                        }
+
+                    for i in range(len(self.AL)):
+                        self.AL[i].send(packet)
+        else:
+            print("DROPPING MSG")
+
+    def receiving_echo(self, echo, id):
+        if self.selfid != DROP_ECHO_ID:
+            if self.first(echo, "ECHO", id):
+                # Used because there can happen that a process receives self.faulty + 1 ACC messages before
+                # receiving the MSG message and this leads to an error when it tries to retrieve that message from MsgSets
+
+                if (
+                    "ECHO",
+                    echo["Source"],
+                    echo["Message"],
+                    echo["SequenceNumber"],
+                ) not in self.echo_counter:
+                    # if the counter is not initialized yet then it initializes the counter and assignes the value 1 to it
+                    # (because there is the message just received)
+                    self.echo_counter.update(
+                        {
+                            (
+                                "ECHO",
+                                echo["Source"],
+                                echo["Message"],
+                                echo["SequenceNumber"],
+                            ): 1
+                        }
+                    )
+                else:
+                    # otherwise it increases its value
+                    self.echo_counter[
                         (
                             "ECHO",
                             echo["Source"],
                             echo["Message"],
                             echo["SequenceNumber"],
-                        ): 1
-                    }
-                )
-            else:
-                # otherwise it increases its value
-                self.echo_counter[
-                    ("ECHO", echo["Source"], echo["Message"], echo["SequenceNumber"])
-                ] += 1
-            self.check(echo["Source"], echo["Message"], echo["SequenceNumber"])
+                        )
+                    ] += 1
+
+                self.check(echo["Source"], echo["Message"], echo["SequenceNumber"])
+        else:
+            print("DROPPING ECHO")
 
     def receiving_acc(self, acc, id):
         if self.first(acc, "ACC", id):
@@ -257,37 +263,42 @@ class Process:
                     if self.__hash(msg) == acc["Message"]:
                         thereis = True
                 if not thereis:
-                    for i in range(len(self.AL)):
-                        for link_id in self.acc_counter[
-                            (
-                                "ACC",
+                    # list of nodes to which REQ must be sent
+                    nodes = self.acc_counter[
+                        (
+                            "ACC",
+                            acc["Source"],
+                            acc["Message"],
+                            acc["SequenceNumber"],
+                        )
+                    ]
+
+                    # loop over all f + 1 to send REQ
+                    for i in nodes:
+                        packet = {
+                            "Flag": "REQ",
+                            "Source": acc["Source"],
+                            "Message": acc["Message"],
+                            "SequenceNumber": acc["SequenceNumber"],
+                        }
+
+                        # use authenticated link to send REQ
+                        self.AL[i - 1].send(packet)
+                        # it adds the current packet and the id of the receiver to keep track of them
+                        # for the check that receiving_fwd will do
+                        self.reqs_sent.append(
+                            [
+                                "REQ",
                                 acc["Source"],
                                 acc["Message"],
                                 acc["SequenceNumber"],
-                            )
-                        ]:
-                            if link_id == self.AL[i].get_id():
-                                packet = {
-                                    "Flag": "REQ",
-                                    "Source": acc["Source"],
-                                    "Message": acc["Message"],
-                                    "SequenceNumber": acc["SequenceNumber"],
-                                }
-                                self.AL[i].send(packet)
-                                # it adds the current packet and the id of the receiver to keep track of them
-                                # for the check that receiving_fwd will do
-                                self.reqs_sent.append(
-                                    [
-                                        "REQ",
-                                        acc["Source"],
-                                        acc["Message"],
-                                        acc["SequenceNumber"],
-                                        id,
-                                    ]
-                                )
+                                id,
+                            ]
+                        )
 
             # This is a revised version of the code where it does not check the id of the sender
             # but the id of the source
+
             self.check(acc["Source"], acc["Message"], acc["SequenceNumber"])
             # This is the original version of the algorithm
             # self.check(id, acc["Message"], acc["SequenceNumber"])
@@ -300,16 +311,15 @@ class Process:
                 if self.__hash(msg) == req["Message"]:
                     sel_msg = msg
                     thereis = True
+
             if thereis:
-                for i in range(len(self.AL)):
-                    if id == self.AL[i].get_id():
-                        packet = {
-                            "Flag": "FWD",
-                            "Source": req["Source"],
-                            "Message": sel_msg,
-                            "SequenceNumber": req["SequenceNumber"],
-                        }
-                        self.AL[i].send(packet)
+                packet = {
+                    "Flag": "FWD",
+                    "Source": req["Source"],
+                    "Message": sel_msg,
+                    "SequenceNumber": req["SequenceNumber"],
+                }
+                self.AL[id - 1].send(packet)
 
     def receiving_fwd(self, fwd, id):
         if [
@@ -346,9 +356,8 @@ class Process:
                     self.echo_counter,
                     self.echos_rec,
                     self.echos_sent,
-                    
                 )
-                logging.info("MSG SET %s",self.MsgSets)
+                logging.info("MSG SET %s", self.MsgSets)
 
                 logging.info(
                     "ACC COUNTER: %s, ACC RECEIVED:%s ACC SENT: %s",
@@ -360,7 +369,11 @@ class Process:
                 if self.__hash(msg) == hash_msg:
                     # the two ifs are merged inside only one because there is no action taken without one of them
                     if (
-                        self.echo_counter[("ECHO", source, hash_msg, sequence_number)]
+                        ("ECHO", source, hash_msg, sequence_number)
+                        in self.echo_counter.keys()
+                        and self.echo_counter[
+                            ("ECHO", source, hash_msg, sequence_number)
+                        ]
                         >= self.faulty + 1
                         and ["ECHO", source, sequence_number] not in self.echos_sent
                     ):
@@ -379,7 +392,11 @@ class Process:
                             self.AL[i].send(packet)
 
                     elif (
-                        self.echo_counter[("ECHO", source, hash_msg, sequence_number)]
+                        ("ECHO", source, hash_msg, sequence_number)
+                        in self.echo_counter.keys()
+                        and self.echo_counter[
+                            ("ECHO", source, hash_msg, sequence_number)
+                        ]
                         >= len(self.ips) - self.faulty
                         and ["ACC", source, sequence_number] not in self.accs_sent
                     ):
@@ -432,9 +449,7 @@ class Process:
                     ) >= len(
                         self.ips
                     ) - self.faulty:
-                        
                         if not self.delivered:
-                            
                             self.delivered = True
 
                             print(
@@ -448,13 +463,9 @@ class Process:
                                 peak,
                             )
 
-
-
                             logging.info(
                                 "----- <%s,%s,%d> -----", source, msg, sequence_number
                             )
-
-
 
     def first(self, message, flag, sender):
         if flag == "MSG":
