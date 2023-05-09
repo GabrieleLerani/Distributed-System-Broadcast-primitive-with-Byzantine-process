@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
 RCV_BUFFER_SIZE = 8192
 KEY_SIZE = 32
-
+KEY_EXCHANGE = 0 # 1
 
 class AuthenticatedLink:
     def __init__(self, self_id, self_ip, idn, ip, proc):
@@ -35,22 +35,27 @@ class AuthenticatedLink:
             if self.self_id < 10 and self.id < 10
             else int("5" + str(self.id) + str(self.self_id))
         )
+        self.written = False
 
     # TODO 
     def key_exchange(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
-            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            while True:
-                # Try Except used to repeat the connection until the other socket is opened again
-                try:
-                    self.sock.connect((self.ip, self.sending_port))
+        if KEY_EXCHANGE == 1:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                while True:
+                    # Try Except used to repeat the connection until the other socket is opened again
+                    try:
+                        self.sock.connect((self.ip, self.sending_port))
 
-                    self.__check(self.sock, self.id)
+                        self.__check(self.id,self.sock)
 
-                    break
-                except Exception as e:
-                    print(f"Exception 1, {e}")
-                    break
+                        break
+                    except ConnectionRefusedError:
+                        
+                        continue
+        else:  
+             self.key[self.id] = utils.get_key(self.self_id, self.id)
+             
 
     def receiver(self):
         logging.info("AUTH:Start thread to receive messages...")
@@ -60,59 +65,67 @@ class AuthenticatedLink:
     # This handles the message receive
     # Now the listening port is the concatenation 50/5 - 'receiving process' - 'sending process'
     def __receive(self):
-        host = ''  # Symbolic name meaning all available interfaces
+        host = ""  # Symbolic name meaning all available interfaces
         #host = utils.get_ip_of_interface()
-        # It uses ternary operator
+        
         
 
         logging.info("AUTH:Port used for receiving: %d", self.receiving_port)
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s:
             self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.s.bind(('', self.receiving_port))
-            self.s.listen(100)
-            print(f"listening for connection on {host,self.receiving_port}")
-            conn, addr = self.s.accept()
+            self.s.bind((host, self.receiving_port))
+            self.s.listen(0)
             
+            conn, addr = self.s.accept()
+                
             with conn:
-                logging.info("AUTH:Connected by %s", addr)
-                while True:
-                    data = conn.recv(RCV_BUFFER_SIZE)
+                    logging.info("AUTH:Connected by %s", addr)
+                    while True:
+                        try:
+                            data = conn.recv(RCV_BUFFER_SIZE)
 
-                    if not data:
-                        break
+                            if not data:
+                                break
 
-                    parsed_data = json.loads(data.decode())
+                            parsed_data = json.loads(data.decode())
+
+                            if not self.written:
+                                logging.info(
+                                    "----- EVALUATION CHECKPOINT: message receiving, time: %s -----",
+                                    time.time() * 1000,
+                                )
+                                self.written = True
+
+
+                            logging.info(
+                                "AUTH: <%s, %d> -- sent this data %s",
+                                self.ip,
+                                self.id,
+                                parsed_data,
+                            )
+
+                            # Useful for performance evaluation, upon the arrival of the first
+                            # message it starts timer to monitor execution time
+
+                            if "MSG" not in parsed_data.keys():
+                                self.__add_key(parsed_data)
+                                conn.sendall(b"synACK")
+                            else:
+                                t = Thread(
+                                    target=self.__deliver,
+                                    args=(parsed_data, threading.currentThread()),
+                                )
+                                t.start()
+
+                            logging.info("AUTH:Received DATA: %s", data)
+                        
+                        except ConnectionResetError:
+                            print(f"Error: Connection reset by <{self.id,self.ip}>")
 
                     logging.info(
-                        "----- EVALUATION CHECKPOINT: message receiving, time: %s -----",
-                        time.time() * 1000,
+                        "AUTH:------- SOCKET CLOSED, ME: %s,TO: %s", self.self_ip, self.ip
                     )
-                    logging.info(
-                        "AUTH: <%s, %d> -- sent this data %s",
-                        self.ip,
-                        self.id,
-                        parsed_data,
-                    )
-
-                    # Useful for performance evaluation, upon the arrival of the first
-                    # message it starts timer to monitor execution time
-
-                    if "MSG" not in parsed_data.keys():
-                        self.__add_key(parsed_data)
-                        conn.sendall(b"synACK")
-                    else:
-                        t = Thread(
-                            target=self.__deliver,
-                            args=(parsed_data, threading.currentThread()),
-                        )
-                        t.start()
-
-                    logging.info("AUTH:Received DATA: %s", data)
-
-                logging.info(
-                    "AUTH:------- SOCKET CLOSED, ME: %s,TO: %s", self.self_ip, self.ip
-                )
 
     def __add_key(self, key_dict):
         self.key[self.id] = key_dict["KEY"].encode("latin1")
@@ -123,7 +136,7 @@ class AuthenticatedLink:
 
     def __check(self, sock, idn):
         #if idn not in self.key and self.self_id <= idn:
-        if idn not in self.key: 
+        if idn not in self.key and self.self_id <= idn:
             self.key[idn] = ChaCha20Poly1305.generate_key()
 
             key_to_send = {"KEY": self.key[idn].decode("latin1")}
@@ -177,12 +190,9 @@ class AuthenticatedLink:
                     sock.sendall(bytes(parsed_data, encoding="utf-8"))
                     logging.info("AUTH: %s sent to <%s, %d>", mess, self.ip, self.id)
                     break
-                except Exception as e:
-                     print(f"Exception {e} {message}")
-                     break
+                except:
+                    continue
                 
-                    
-
                 
 
     # It checks message authenticity comparing the hmac

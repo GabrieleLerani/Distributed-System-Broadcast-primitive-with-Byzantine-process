@@ -50,7 +50,9 @@ class Process:
         self.selfid = self.ids[self.ips.index(self.selfip)]
         self.barrier = threading.Barrier(parties=2)
 
+        
         for i in range(0, len(self.ids)):
+            
             self.AL.append(
                 AuthenticatedLink.AuthenticatedLink(
                     self.selfid,
@@ -61,11 +63,12 @@ class Process:
                 )
             )
             self.AL[i].receiver()
-        
+            
         
         for i in range(0, len(self.ids)):
             self.AL[i].key_exchange()
-
+        
+        
 
     def __thread(self):
         while True:
@@ -137,6 +140,7 @@ class Process:
             time.time() * 1000,
         )
 
+        
         # Create packet as a dictionary
         packet = {"MSG": message, "FLAG": "SEND"}
         for i in range(len(self.ids)):

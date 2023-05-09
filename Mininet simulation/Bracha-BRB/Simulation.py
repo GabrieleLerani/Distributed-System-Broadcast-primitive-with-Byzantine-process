@@ -8,7 +8,7 @@ import Topology
 import resource
 
 # TODO set the following as environment variable or with YAML file
-SIMULATION_NUMBER = 4  # number of simulation for each number of process
+SIMULATION_NUMBER = 2  # number of simulation for each number of process
 SIMULATION_FREQUENCY = 4  # sec
 MIN_PROC_NUMBER = 4
 MAX_PROC_NUMBER = 8  # suggest to use only even numbers
@@ -50,12 +50,12 @@ def start_simulation():
                 # TODO Modify with cycle to change payload size
                 payload = utils.generate_payload(size)
 
-                print()
+                
                 Topology.run_hosts(
                     net, size, int((i - MIN_PROC_NUMBER + 2) / 2), j + 1, payload
                 )
 
-                # timer used to allow hosts to terminate
+                # TODO timer used to allow hosts to terminate
                 time.sleep(SIMULATION_FREQUENCY)
 
         # TODO used to reduce CPU utilization
@@ -74,7 +74,5 @@ if __name__ == "__main__":
 
     setup_simulation_environment()
     start_simulation()
-
     eval.create_stats_file()
-
     eval.plot_graphs()

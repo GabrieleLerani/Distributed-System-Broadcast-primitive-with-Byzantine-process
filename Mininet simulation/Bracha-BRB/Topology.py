@@ -19,7 +19,7 @@ import time
 CHANNEL_BANDWIDTH = 10  # Mbps
 DELAY = 0.06  # ms
 
-setLogLevel("info")
+setLogLevel("warning")
 
 
 # Create a single switch topology
@@ -171,21 +171,18 @@ def run_hosts(net, size, round, sim_number, message):
     # time.sleep(0.2)
 
     # for i in range(2, len(hosts) + 2):
+
     hosts = net.hosts
-
-    thread_list = []
-
-    barrier = threading.Barrier(len(hosts))
+    
     info("*** Executing BRB\n")
-    for i in range(len(hosts), 0, -1):
-        # convention: sender is the process with the highest id
-        if i == len(hosts):
+    for i in range(1 ,len(hosts) + 1):
+        
+        if i == 1:
             sender = net.get("h%i" % i)
 
             t = Thread(
                 target=run_sender,
                 args=(
-                    barrier,
                     sender,
                     message,
                     size,
@@ -194,7 +191,7 @@ def run_hosts(net, size, round, sim_number, message):
                 ),
             )
             t.start()
-            thread_list.append(t)
+            
             # Used to allow sender to start
             # time.sleep(0.1)
         else:
@@ -203,7 +200,6 @@ def run_hosts(net, size, round, sim_number, message):
             t = Thread(
                 target=run_receiver,
                 args=(
-                    barrier,
                     receiver,
                     size,
                     round,
@@ -211,15 +207,10 @@ def run_hosts(net, size, round, sim_number, message):
                 ),
             )
             t.start()
-            thread_list.append(t)
+            
 
-    for t in thread_list:
-        print("waiting: ", t.getName())
-        t.join()
-
-
-def run_sender(barrier, sender, message, payload_size, round, sim_number):
-    barrier.wait()
+def run_sender(sender, message, payload_size, round, sim_number):
+    
     print(f"--- Executing sender round:{round}, exec:{sim_number}")
     sender.pexec(
         [
@@ -233,8 +224,8 @@ def run_sender(barrier, sender, message, payload_size, round, sim_number):
     )
 
 
-def run_receiver(barrier, receiver, payload_size, round, sim_number):
-    barrier.wait()
+def run_receiver(receiver, payload_size, round, sim_number):
+    
     print(f"--- Executing receiver round:{round}, exec:{sim_number}")
     receiver.pexec(
         [

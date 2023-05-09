@@ -7,7 +7,40 @@ import shutil
 import csv
 import string
 import random
+import signal
+import time
+from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
+# TODO used only for simulations, normally processes should share keys with socket
+def create_keys(n):
+    with open("symmetric_keys.csv", "w", newline="") as file:
+        writer = csv.writer(file)
+
+        keys = {}
+        for i in range(1, n + 1):
+            for j in range(1, n + 1):
+                if (i, j) not in keys and (j, i) not in keys:
+                    symm_key = ChaCha20Poly1305.generate_key().decode("latin1")
+                    keys[(i, j)] = symm_key
+                    writer.writerow([i, j, keys[i, j]])
+
+
+def get_key(id_p1, id_p2):
+    with open("symmetric_keys.csv", "r", newline="") as file:
+        reader = csv.reader(file)
+        for row in reader:
+            if (
+                str(id_p1) == row[0]
+                and str(id_p2) == row[1]
+                or str(id_p1) == row[1]
+                and str(id_p2) == row[0]
+            ):
+                return row[2].encode("latin-1")
+               
+# end app with signal SIGTERM
+def end_app(pid,timer):
+    time.sleep(timer)
+    os.kill(pid, signal.SIGTERM)
 
 def serialize_json(message):
     # serialize
@@ -24,7 +57,7 @@ def serialize_json(message):
 
     return payload
 
-
+# get ip of interface eth0 which each mininet host is listening
 def get_ip_of_interface():
     interfaces = ni.interfaces()
     for interface in interfaces:
@@ -53,6 +86,8 @@ def set_process_logging(payload_size, rnd, sim_num):
         filename="simulations/payload_size{size}/round{round}/exec{sim_num}/debug_process{ip}.log".format(
             size=payload_size, sim_num=sim_num, round=rnd, ip=get_ip_of_interface()
         ),
+        
+        #filename="debug{ip}.log".format(ip=get_ip_of_interface()), # TODO just to make attempts
         filemode="w",
         level=logging.DEBUG,
     )
@@ -107,7 +142,8 @@ def get_process_list(process_numbers):
     proc_list = []
     for i in range(1, process_numbers + 1):
         proc_list.append(
-            [process_numbers + 1 - i, "10.0.0.%i" % (i)]
+            [i, "10.0.0.%i" % (i)]
+           # [process_numbers + 1 - i, "10.0.0.%i" % (i)]
         )  # first process in mininet has 10.0.0.2 beacause nat is 10.0.0.1
 
     return proc_list
@@ -141,4 +177,7 @@ def generate_payload(length):
 
 # TODO remove, used for debugging
 if __name__ == "__main__":
-    clean_simulation_folder()
+    #clean_simulation_folder()
+    # write_process_identifier(5)
+    # create_keys(5)
+    print(get_key(1,4))
