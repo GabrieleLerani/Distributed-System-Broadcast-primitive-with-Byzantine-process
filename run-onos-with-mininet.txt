@@ -1,0 +1,4 @@
+1) run docker image with: sudo docker run -t -d -p 8181:8181 -p 8101:8101 -p 5005:5005 -p 830:830 --name onos onosproject/onos
+2) run sudo mn --topo linear,2 --link tc,bw=100,delay=0.2ms --mac --controller=remote,ip=172.17.0.2 --switch ovs,protocols=OpenFlow13
+3) access on http://172.17.0.2:8181/onos/ui/#/index.html
+
