@@ -15,7 +15,7 @@ import Evaluation
 KDS_IP = "10.0.0.1"
 KDS_PORT = 8080
 
-RCV_BUFFER_SIZE = 8192
+RCV_BUFFER_SIZE = 32768
 BREAK_TIME = 0.1
 
 BROADCASTER_ID = 1
@@ -41,10 +41,12 @@ class Process:
         self.counter_signed_mess = {}
         self.faulty = 0  # f<N/3 condition to protocol correctness
         self.eval = Evaluation.Evaluation()
+        
 
     def init_process(self):
         self.eval.tracing_start()
         self.init_process_ids()
+        self.get_key_pair()
         self.faulty = math.floor((len(self.ids) - 1) / 3)
         logging.debug("PROCESS: id list: %s,ip list %s", self.ids, self.ips)
         print("-----GATHERED ALL THE PEERS IPS AND IDS-----")
@@ -56,13 +58,14 @@ class Process:
             self.ids.append(int(pair[0]))  # pair[0] --> ID
             self.ips.append(pair[1])  # pair[1] --> IPS
 
-    def creation_links(self):
-        # binding my information
-
-        # checking os
+        # set id and ip
         self.sip = utils.get_ip_of_interface()
         self.sid = self.ids[self.ips.index(self.sip)]
+        
 
+
+    def creation_links(self):
+        
         # creating links
         for i in range(0, len(self.ids)):
             # init links
@@ -95,13 +98,31 @@ class Process:
             )
         self.AL[0].receiver()
 
-        # Start key exchange
-        for i in range(len(self.ids)):
-            self.AL[i].key_exchange()
+        
+    def get_process_keys(self):
+        
+        for id in self.ids:
+            temp_key = self.connection_to_KDS(id, 0)
+            self.public_keys.setdefault(str(id),{})
+            self.public_keys[str(id)].setdefault("N",{})
+            self.public_keys[str(id)].setdefault("E",{})
+            self.public_keys[str(id)]["N"] = temp_key["N"]
+            self.public_keys[str(id)]["E"] = temp_key["E"]
+        
+        logging.info("PUBLIC KEYS: %s",self.public_keys)
+
+    def get_key_pair(self):
+        # connect to kds to get keyPair
+        if not self.key_gen:
+            logging.info("PROCESS:Calling KDS to get key pair")
+            self.key_gen = True
+            self.keyPair = self.connection_to_KDS(self.sid, 1)
+        
 
     def broadcast(self, message):
+          
+  
         # broadcasting messages to all processes
-
         msg = {}
         msg["TYPE"] = 0
         msg["FLAG"] = "PROPOSE"
@@ -117,6 +138,11 @@ class Process:
         # receive messages from the underlying pppl
         match message.get("TYPE"):
             case 0:
+                
+                if len(self.public_keys) == 0:
+                    self.get_process_keys()
+                
+
                 if (
                     message.get("FROM") == BROADCASTER_ID
                     and message.get("FLAG") == "PROPOSE"
@@ -147,7 +173,7 @@ class Process:
                 # we check whether a message sign has already been checked
                 if message.get("FLAG") == "VOTE":
                     if key_to_check not in self.checked.keys():
-                        print("Checking signature")
+                        
                         self.checked[key_to_check] = self.check_signature(
                             message.get("FLAG") + message.get("MSG"),
                             message.get("SIGN"),
@@ -171,24 +197,14 @@ class Process:
 
                         # TODO check if it works
                         if key_to_check not in self.checked.keys():
-                            print(
-                                "Checking signature for message sent by",
-                                elem.get("FROM"),
-                            )
+                            
                             self.checked[key_to_check] = self.check_signature(
                                 elem.get("FLAG") + elem.get("MSG"),
                                 elem.get("SIGN"),
                                 elem.get("FROM"),
                             )
 
-                        # TODO
-                        print(
-                            "--- CHECKED SET FOR:",
-                            elem["FLAG"],
-                            elem["MSG"],
-                            elem.get("FROM"),
-                            self.checked[key_to_check],
-                        )
+                        
                         if self.checked[key_to_check]:
                             counter += 1
                             if counter == len(self.ids) - self.faulty:
@@ -196,7 +212,7 @@ class Process:
                                     self.L[i].link_send(message)
                                     self.deliver(elem["MSG"])
                                     self.__close_link()
-
+                                
                 else:
                     logging.info(
                         "PROCESS:Already delivered not re-broadcast all the signed vote messages"
@@ -245,31 +261,33 @@ class Process:
 
     def check_signature(self, message, signature, idn):
         # checking signature for received signed vote messages
-        if str(idn) not in self.public_keys.keys():  # maybe list
-            logging.info("PROCESS:Calling KDS to get public key")
+        try:
+            
+            # wait until the key of the process who I need to check signature is added
+            while str(idn) not in self.public_keys.keys():
+                pass
+            
+            print(f"Checking signature of propose sent by {idn}")
+            msg = bytes(message, "utf-8")
+            hash = int.from_bytes(sha512(msg).digest(), byteorder="big")
+            
+            hashFromSignature = pow(
+                signature, self.public_keys[str(idn)]["E"], self.public_keys[str(idn)]["N"]
+            )
+            logging.info("PROCESS:Signature check exit:<%r>", hash == hashFromSignature)
+            check = hash == hashFromSignature 
+            if check:
+                print(f"Signature from {idn} is valid")
+            else:
+                print(f"Not valid signature from {idn}")
+                
+            return check
+        except KeyError as e:
+            print(f"Error: {e}\nKey set: {self.public_keys}")
 
-            # initialize dictionary for public keys of process id=idn
-            self.public_keys[str(idn)] = {}
-            temp_dict = self.connection_to_KDS(idn, 0)
-            self.public_keys[str(idn)]["N"] = temp_dict["KEY"]["N"]
-            self.public_keys[str(idn)]["E"] = temp_dict["KEY"]["E"]
-
-        msg = bytes(message, "utf-8")
-        hash = int.from_bytes(sha512(msg).digest(), byteorder="big")
-        hashFromSignature = pow(
-            signature, self.public_keys[str(idn)]["E"], self.public_keys[str(idn)]["N"]
-        )
-        logging.info("PROCESS:Signature check exit:<%r>", hash == hashFromSignature)
-        print("check executed")
-        return hash == hashFromSignature
 
     def make_signature(self, message):
-        # generating keys
-        if not self.key_gen:
-            logging.info("PROCESS:Calling KDS to get key pair")
-            self.key_gen = True
-            self.keyPair = self.connection_to_KDS(self.sid, 1)
-
+        
         # sign
         msg = bytes(message, "utf-8")
         hash = int.from_bytes(sha512(msg).digest(), byteorder="big")

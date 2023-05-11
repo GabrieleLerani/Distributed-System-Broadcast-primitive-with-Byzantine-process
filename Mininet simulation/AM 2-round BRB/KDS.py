@@ -4,10 +4,10 @@ import logging
 import socket
 import json
 from Crypto.PublicKey import RSA
-import pickle
+
 N = 10
 KEYS = {}
-RCV_BUFFER_SIZE = 8192
+RCV_BUFFER_SIZE = 32768
 
 
 class KDSHandler(asyncore.dispatcher_with_send):
@@ -18,6 +18,7 @@ class KDSHandler(asyncore.dispatcher_with_send):
 
         if data:
             parsed_data = json.loads(data.decode())
+            
             # client wants KDS to generate key pair
             if parsed_data.get('TYPE')==1:
                 logging.info("KDS: request to generate public/private key pair")
@@ -29,24 +30,25 @@ class KDSHandler(asyncore.dispatcher_with_send):
                 pack['E'] = keys.e
                 pack['N'] = keys.n
                 pack['D'] = keys.d
-                send_pack = json.dumps(pack)
-                self.send(send_pack.encode())
+                json_data = json.dumps(pack)
+                self.send(json_data.encode())
 
+                
                 KEYS[str(parsed_data['FROM'])] = {}
                 KEYS[str(parsed_data['FROM'])]['N'] = keys.n
                 KEYS[str(parsed_data['FROM'])]['E'] = keys.e
                 logging.info("KDS:Public key of %s registered", parsed_data.get('FROM'))
-            elif parsed_data.get('TYPE')==0:  # client wants KDS to get a public key
+            
+            # client wants KDS to get a public key
+            elif parsed_data.get('TYPE')==0:  
                 logging.info("KDS: requested a public key")
+                           
                 pack = {}
-                pack['KEY'] = {}
-                pack['KEY']['N'] = KEYS[str(parsed_data.get('FROM'))].get('N')
-                pack['KEY']['E'] = KEYS[str(parsed_data.get('FROM'))].get('E')
+                pack['N'] = KEYS[str(parsed_data.get('FROM'))].get('N')
+                pack['E'] = KEYS[str(parsed_data.get('FROM'))].get('E')
                 send_pack = json.dumps(pack)
-                self.send(send_pack.encode())
-                
+                self.send(send_pack.encode())               
                 logging.info("KDS:Public key of %s sent", parsed_data.get('FROM'))
-
         else:
             logging.info("KDS:No more data from client")
 
