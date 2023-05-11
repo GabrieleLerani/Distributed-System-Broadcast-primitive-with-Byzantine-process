@@ -5,12 +5,14 @@ import json
 import logging
 import threading
 import time
+import utils
 from threading import Thread
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
-RCV_BUFFER_SIZE = 8192
+RCV_BUFFER_SIZE = 16384
 KEY_SIZE = 32
 
+KEY_EXCHANGE = 1 # 0
 
 class AuthenticatedLink:
     def __init__(self, self_id, self_ip, idn, ip, proc):
@@ -30,20 +32,25 @@ class AuthenticatedLink:
             if self.self_id < 10 and self.id < 10
             else int("5" + str(self.id) + str(self.self_id))
         )
+        self.written = False
 
     def key_exchange(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
-            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            while True:
-                # Try Except used to repeat the connection until the other socket is opened again
-                try:
-                    self.sock.connect((self.ip, self.sending_port))
+        if KEY_EXCHANGE == 1:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.sock:
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                while True:
+                    # Try Except used to repeat the connection until the other socket is opened again
+                    try:
+                        self.sock.connect((self.ip, self.sending_port))
 
-                    self.__check(self.id, self.sock)
+                        self.__check(self.id,self.sock)
 
-                    break
-                except ConnectionRefusedError:  # TODO solves this
-                    continue
+                        break
+                    except ConnectionRefusedError:
+                        
+                        continue
+        else:  
+             self.key[self.id] = utils.get_key(self.self_id, self.id)
 
     def get_id(self):
         return self.self_id
@@ -74,10 +81,13 @@ class AuthenticatedLink:
 
                         parsed_data = json.loads(data.decode())
 
-                        logging.info(
-                            "----- EVALUATION CHECKPOINT: message receiving, time: %s -----",
-                            time.time() * 1000,
-                        )
+                        if not self.written:
+                            logging.info(
+                                "----- EVALUATION CHECKPOINT: message receiving, time: %s -----",
+                                time.time() * 1000,
+                            )
+                            self.written = True
+
 
                         if "FLAG" not in parsed_data.keys():
                             self.__add_key(parsed_data)
@@ -94,7 +104,6 @@ class AuthenticatedLink:
                             ready = True
 
                 if ready:
-                    print("Closing --", threading.current_thread())
                     break
 
     def __add_key(self, key_dict):
