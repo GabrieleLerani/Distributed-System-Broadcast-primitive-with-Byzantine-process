@@ -121,7 +121,6 @@ class Process:
 
     def broadcast(self, message):
           
-  
         # broadcasting messages to all processes
         msg = {}
         msg["TYPE"] = 0
@@ -174,20 +173,34 @@ class Process:
                 if message.get("FLAG") == "VOTE":
                     if key_to_check not in self.checked.keys():
                         
+                        # set for that specific key the check signature result so that it's not
+                        # required to check twice the same message
                         self.checked[key_to_check] = self.check_signature(
                             message.get("FLAG") + message.get("MSG"),
                             message.get("SIGN"),
                             message.get("FROM"),
                         )
 
+                    
                     if self.checked[key_to_check]:
+                        # if signature is valid then check whether you have n - f signed VOTE messages
                         self.check(message)
 
             case 2:
+                # used to count verified message, if n - f then deliver
                 counter = 0
+
+                # store into a temp variable list of forwarded signed messages
                 temp_l = message["SIGNED_VOTE_MSGS"]
+                
+                print("SIGNED VOTE MSGS",temp_l)
                 if len(temp_l) == len(self.ids) - self.faulty and not self.delivered:
+                    
+                    # used to take trace for how many signs for a message
+                    messages = {}
+                    
                     for elem in temp_l:
+                        # temp key to reduce redundancy
                         key_to_check = (
                             elem["FLAG"],
                             elem["MSG"],
@@ -195,22 +208,30 @@ class Process:
                             elem["FROM"],
                         )
 
-                        # TODO check if it works
+                        # check whether the message signature has already been checked
                         if key_to_check not in self.checked.keys():
                             
+                            # if no then check and store it
                             self.checked[key_to_check] = self.check_signature(
-                                elem.get("FLAG") + elem.get("MSG"),
-                                elem.get("SIGN"),
-                                elem.get("FROM"),
+                                elem["FLAG"] + elem["MSG"],
+                                elem["SIGN"],
+                                elem["FROM"],
                             )
 
-                        
-                        if self.checked[key_to_check]:
+                        # if signature is valid and the current message is really a VOTE increase the counter
+                        if self.checked[key_to_check] and "VOTE" == elem["FLAG"]:
                             counter += 1
+                            messages[elem["MSG"]] = counter
+                            
+                            # check whether there is a signed vote message with at least n - f signs
+                            # it is used to avoid to deliver a last message which is forged by the byzantine process
+                            msg_to_deliver = self.there_is_message(messages)
+                            print(messages)
+                            # when you have n-f valid message commit and close link
                             if counter == len(self.ids) - self.faulty:
                                 for i in range(len(self.ids)):
                                     self.L[i].link_send(message)
-                                    self.deliver(elem["MSG"])
+                                    self.deliver(msg_to_deliver)
                                     self.__close_link()
                                 
                 else:
@@ -226,6 +247,12 @@ class Process:
             self.L[j].td.terminating_flag = True
         exit(0)
 
+
+    def there_is_message(self,messages):
+        for mess, value in messages.items():
+            if value >= len(self.ids) - self.faulty:
+                return mess
+                            
     # if you have n-f then forward this signed messages to all processes
     def check(self, message):
         temp_dict = {
@@ -235,12 +262,15 @@ class Process:
             "FROM": message["FROM"],
         }
 
+        # add vote message to signed
         self.signed_vote_messages.append(temp_dict)
 
+        # count signed messages
         if message["MSG"] not in self.counter_signed_mess.keys():
             self.counter_signed_mess[message["MSG"]] = 0
 
         self.counter_signed_mess[message["MSG"]] += 1
+        # when there are at least n - f signed message add them to list
         if self.counter_signed_mess[message["MSG"]] >= len(self.ids) - self.faulty:
             list_of_signed_msg = []
             for elem in self.signed_vote_messages:
@@ -253,8 +283,7 @@ class Process:
             vote_messages = {
                 "SIGNED_VOTE_MSGS": list_of_signed_msg,
                 "TYPE": 2,
-                # "FROM": message["FROM"],
-                "FROM": self.sid,
+                "FROM": self.sid
             }
             for i in range(len(self.ids)):
                 self.L[i].link_send(vote_messages)

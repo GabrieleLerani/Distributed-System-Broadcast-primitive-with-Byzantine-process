@@ -1,16 +1,8 @@
-import math
-import Link
-import utils
-import socket
 from threading import Thread
-import json
-import time
 import logging
 from sys import platform
 from hashlib import sha512
-import Authenticated_Link
-import Evaluation
-import Process
+from Process import Process
 import random
 
 
@@ -28,7 +20,7 @@ PLACEHOLDER = "vote_msg"
 # This process forges a type 1 message (VOTE message) and a whole type 2 message (SIGNED_VOTE_MSGS)
 class ByzantineProcess(Process):
     def __init__(self):
-        super().init()
+        super().__init__()
         self.byz_mess = "byz_mess"
 
     def process_receive(self, message):
@@ -83,6 +75,7 @@ class ByzantineProcess(Process):
             case 2:
                 counter = 0
                 temp_l = message["SIGNED_VOTE_MSGS"]
+                print(temp_l)
                 if len(temp_l) == len(self.ids) - self.faulty and not self.delivered:
                     for elem in temp_l:
                         key_to_check = (
@@ -101,14 +94,13 @@ class ByzantineProcess(Process):
                                 elem.get("FROM"),
                             )
 
-                        
                         if self.checked[key_to_check]:
                             counter += 1
                             if counter == len(self.ids) - self.faulty:
                                 for i in range(len(self.ids)):
                                     self.L[i].link_send(message)
                                     self.deliver(elem["MSG"])
-                                    self.__close_link()
+                                    super().__close_link()
                                 
                 else:
                     logging.info(
