@@ -7,14 +7,11 @@ import utils
 import Evaluation
 import time
 import itertools
-from binascii import hexlify, unhexlify
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
-from Crypto.Protocol.SecretSharing import Shamir
-from base64 import b64encode
+from pyeclib import ec_iface
 
 
 BROADCASTER_ID = 1
+
 
 
 class Process:
@@ -25,7 +22,6 @@ class Process:
         self.selfid = 0
         self.AL = []
         self.h = 0  # sequence number of the message
-        self.ENC_INF = {}
         self.MsgSet = {}
         self.COUNTER = {}
         self.CodeSet = {}
@@ -42,11 +38,15 @@ class Process:
         self.eval = Evaluation.Evaluation()
         self.delivered = False
         self.bit_echo = False
+        self.k = 0 # message is split in k fragments, this value is used for MDS 
+        self.codeword = []
+
 
     def init_process(self):
         self.eval.tracing_start()
         self.init_process_ids()
         self.faulty = math.floor((len(self.ids) - 1) / 3)
+        self.k = self.faulty + 1   # Number of data elements is n - 3f according to the theorem
         logging.debug("PROCESS: id list: %s,ip list %s", self.ids, self.ips)
         print("-----GATHERED ALL THE PEERS IPS AND IDS-----")
         print("-----STARTING SENDING OR RECEIVING MESSAGES-----")
@@ -94,96 +94,44 @@ class Process:
 
             case "FWD":
                 self.deliver_fwd(message)
-            case "ENC_INF":
-                self.deliver_enc_inf(message)
             case _:
                 logging.info("PROCESS:ERROR:Received a message of flag undefined")
+    
+    def encode(self,message):
+        # Create an instance of the erasure code driver
+        ec_driver = ec_iface.ECDriver(k=self.k, m=len(self.ids), ec_type='liberasurecode_rs_vand')
+        
+        # encoder will generate n + k encoded element where k is f + 1
+        encoded_data = ec_driver.encode(bytes(message,"utf-8"))
+        print("len:",len(encoded_data))
+        return encoded_data
 
-    def encrypt(self, msg, sid, sn):
-        # Compute the hash of the message
-        hash_msg = self.__hash(msg)
+    def decode(self,encoded_data):
+        # Create an instance of the erasure code driver
+        ec_driver = ec_iface.ECDriver(k=self.k, m=len(self.ids), ec_type='liberasurecode_rs_vand')
+        
+        # decoder will decode correctly only if the input contains at least f + 1 uncorrupted coded elements
+        data = ec_driver.decode(encoded_data).decode("utf-8")
+        return data
 
-        # Preparation of the Shamir algorithm
-        key = get_random_bytes(16)
-
-        shares = Shamir.split(self.faulty + 1, len(self.ips), key)
-
-        # write shares on logging
-        for idx, share in shares:
-            logging.info("PROCESS:Index #%d: %s" % (idx, hexlify(share)))
-
-        # Creation of the n fragments
-        cipher = AES.new(key, AES.MODE_EAX)
-        ct, tag = cipher.encrypt(msg.encode()), cipher.digest()
-
-        enc_inf_key = str(sid) + str(hash_msg) + str(sn)
-
-        self.ENC_INF[enc_inf_key] = [cipher.nonce, tag, ct]
-
-        # encode enf inf with latin to allow json dump
-        packet = {"FLAG": "ENC_INF", enc_inf_key: []}
-        temp_ENC = [cipher.nonce, tag, ct]
-        for i in range(len(temp_ENC)):
-            packet[enc_inf_key].append(list(temp_ENC[i]))
-
-        # send nonce tag and ct to other
-        for i in range(len(self.ids)):
-            self.AL[i].send(packet)
-
-        emsg = b64encode(cipher.nonce + tag + ct)
-        logging.info("PROCESS:%s", emsg)
-
-        if enc_inf_key not in self.CodeSet.keys():
-            self.CodeSet[enc_inf_key] = []
-
-        for i in range(0, len(self.ids)):
-            self.fragments.append(shares[i])
-
-    def decrypt(self, C, s, h, H):
-        # create a 4 data block with 2 parity block code generator
-
-        C = utils.list_to_tuple(C)
-
-        # C must be a list of tuples like (index,share)
-        key = Shamir.combine(C)
-
-        # TODO process which is not the sender has self.ENC_INF empty
-        nonce, tag = self.ENC_INF[str(s) + str(H) + str(h)][:2]
-        cipher = AES.new(key, AES.MODE_EAX, nonce)
-        try:
-            result = cipher.decrypt(self.ENC_INF[str(s) + str(H) + str(h)][2])
-            cipher.verify(tag)
-
-            return result
-        except ValueError:
-            print("The shares were incorrect")
 
     def broadcast(self, message):
         logging.info(
             "----- EVALUATION CHECKPOINT: broadcast start, time: %s -----",
             time.time() * 1000,
         )
-        # TODO
 
-        # self.h = self.h+1 # incrementing sequence number
-        self.h = self.selfid
-        self.encrypt(
-            message, self.selfid, self.h
-        )  # creating coded elements and inserting them into self.CodeSet
+        
+        self.codeword = self.encode(message)
 
         for i in range(len(self.ids)):
-            number = self.fragments[i][0]
-
-            # convert the byte sequence of each fragment to a list so to ease
-            # sending process and encoding
-            share = list(self.fragments[i][1])
-
+           
             message_to_send = {
                 "FLAG": "MSG",
                 "FROM": str(self.selfid),
                 "SOURCE": str(self.selfid),
                 "HASH": self.__hash(message),
-                "C": [number, share],
+                "C": list(self.codeword[i]),
                 "SEQUENCENUMBER": str(self.h),
             }
 
@@ -195,153 +143,183 @@ class Process:
         # MESSAGE{'FLAG':flag,'FROM':from,'S':s}
         # id == 1 checks that the delivery is computed with the sender s that by convention it's the first
         # s is meant for the broadcaster or for the source of the message it changes something?
+        if self.selfid != 4:
+            try:
+                if (
+                    msg["FROM"] == msg["SOURCE"]
+                    and ["MSG", str(msg["SOURCE"]), str(msg["SEQUENCENUMBER"])]
+                    not in self.ReceivedMsg
+                ):
+                    self.ReceivedMsg.append(
+                        ["MSG", str(msg["SOURCE"]), str(msg["SEQUENCENUMBER"])]
+                    )
 
-        if (
-            msg["FROM"] == msg["SOURCE"]
-            and ["MSG", str(msg["SOURCE"]), str(msg["SEQUENCENUMBER"])]
-            not in self.ReceivedMsg
-        ):
-            self.ReceivedMsg.append(
-                ["MSG", str(msg["SOURCE"]), str(msg["SEQUENCENUMBER"])]
-            )
+                    if self.selfid == BROADCASTER_ID:
+                        self.barrier.wait()
 
-            if self.selfid == BROADCASTER_ID:
-                self.barrier.wait()
+                    logging.info(
+                        "PROCESS: %d,%s --- Starting the ECHO part...",
+                        self.selfid,
+                        self.selfip,
+                    )
 
-            logging.info(
-                "PROCESS: %d,%s --- Starting the ECHO part...", self.selfid, self.selfip
-            )
-
-            src_hash_sn = (
-                str(msg["SOURCE"]) + str(msg["HASH"]) + str(msg["SEQUENCENUMBER"])
-            )
-
-            if src_hash_sn not in self.CodeSet.keys():
-                self.CodeSet[src_hash_sn] = []
-
-            # TODO FOR ENCODING
-            if (msg["C"][0], bytes(msg["C"][1])) not in self.CodeSet[src_hash_sn]:
-                self.CodeSet[src_hash_sn].append((msg["C"][0], bytes(msg["C"][1])))
-
-            echo_s_hash_H = (
-                str("ECHO")
-                + str(msg["SOURCE"])
-                + str(msg["HASH"])
-                + str(msg["SEQUENCENUMBER"])
-            )
-            self.COUNTER.setdefault(echo_s_hash_H, 0)
-
-            if ["ECHO", msg["SOURCE"], msg["SEQUENCENUMBER"]] not in self.SentECHO:
-                self.SentECHO.append(["ECHO", msg["SOURCE"], msg["SEQUENCENUMBER"]])
-
-                number = msg["C"][0]
-                share = msg["C"][1]
-
-                packet = {
-                    "FLAG": "ECHO",
-                    "FROM": str(self.selfid),
-                    "SOURCE": str(msg["SOURCE"]),
-                    "HASH": str(msg["HASH"]),
-                    "C": [number, share],
-                    "SEQUENCENUMBER": str(msg["SEQUENCENUMBER"]),
-                }
-
-                for i in range(len(self.ids)):
-                    self.AL[i].send(packet)
-
-    def deliver_echo(self, msg):
-        self.bit_echo = True
-
-        flag_src_sn = str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-        if flag_src_sn not in self.RECEIVEDECHO.keys():
-            self.RECEIVEDECHO[flag_src_sn] = []
-
-        if msg["FROM"] not in self.RECEIVEDECHO[flag_src_sn]:
-            self.RECEIVEDECHO[flag_src_sn].append(msg["FROM"])
-
-            flag_src_hash_sn = (
-                str(msg["FLAG"])
-                + str(msg["SOURCE"])
-                + str(msg["HASH"])
-                + str(msg["SEQUENCENUMBER"])
-            )
-            # used to avoid key error, it sets a default value of 0
-            self.COUNTER.setdefault(
-                flag_src_hash_sn,
-                0,
-            )
-
-            self.COUNTER[flag_src_hash_sn] += 1
-
-            src_hash_sn = (
-                str(msg["SOURCE"]) + str(msg["HASH"]) + str(msg["SEQUENCENUMBER"])
-            )
-            # used not to generate the error
-            if src_hash_sn not in self.CodeSet.keys():
-                self.CodeSet[src_hash_sn] = []
-
-            print("----", msg["C"][1])
-            if (msg["C"][0], bytes(msg["C"][1])) not in self.CodeSet[src_hash_sn]:
-                self.CodeSet[src_hash_sn].append((msg["C"][0], bytes(msg["C"][1])))
-
-            if (
-                self.COUNTER[
-                    str(msg["FLAG"])
-                    + str(msg["SOURCE"])
-                    + str(msg["HASH"])
-                    + str(msg["SEQUENCENUMBER"])
-                ]
-                >= self.faulty + 1
-            ):
-                there_is = False
-                src_sn = str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-
-                if src_sn not in self.MsgSet.keys():
-                    self.MsgSet[src_sn] = []
-                for j in self.MsgSet[src_sn]:
-                    if self.__hash(j) == str(msg["HASH"]):
-                        there_is = True
-                        break
-
-                if not there_is:
-                    # checking condition and why j
-                    # src_hash_from = (
-                    #     str(msg["SOURCE"]) + str(msg["HASH"]) + str(msg["FROM"])
-                    # )
-                    src_hash_from = (
+                    src_hash_sn = (
                         str(msg["SOURCE"])
                         + str(msg["HASH"])
                         + str(msg["SEQUENCENUMBER"])
                     )
 
-                    if src_hash_from not in self.CodeSet.keys():
-                        self.CodeSet[src_hash_from] = []
+                    if src_hash_sn not in self.CodeSet.keys():
+                        self.CodeSet[src_hash_sn] = []
 
-                    subset = self.CodeSet[src_hash_from]
+                    
+                    if (bytes(msg["C"])) not in self.CodeSet[
+                        src_hash_sn
+                    ]:
+                        self.CodeSet[src_hash_sn].append(
+                            bytes(msg["C"])
+                        )
 
-                    c = self.get_powerset(subset)
-                    # c = list(itertools.combinations(subset, self.faulty + 1))
+                    echo_s_hash_H = (
+                        str("ECHO")
+                        + str(msg["SOURCE"])
+                        + str(msg["HASH"])
+                        + str(msg["SEQUENCENUMBER"])
+                    )
+                    self.COUNTER.setdefault(echo_s_hash_H, 0)
 
-                    for l in c:
-                        if len(l) == self.faulty + 1:  # and not utils.has_duplicate(l):
-                            m = self.decrypt(
-                                l, msg["SOURCE"], msg["SEQUENCENUMBER"], msg["HASH"]
-                            ).decode(
-                                "utf-8"
-                            )  # TODO checking if passing a set coherent with decrypt function
+                    if [
+                        "ECHO",
+                        msg["SOURCE"],
+                        msg["SEQUENCENUMBER"],
+                    ] not in self.SentECHO:
+                        self.SentECHO.append(
+                            ["ECHO", msg["SOURCE"], msg["SEQUENCENUMBER"]]
+                        )
 
-                            hash_msg = self.__hash(m)
+                        packet = {
+                            "FLAG": "ECHO",
+                            "FROM": str(self.selfid),
+                            "SOURCE": str(msg["SOURCE"]),
+                            "HASH": str(msg["HASH"]),
+                            "C": msg["C"],
+                            "SEQUENCENUMBER": str(msg["SEQUENCENUMBER"]),
+                        }
 
-                            if msg["HASH"] == hash_msg:
-                                self.MsgSet[
-                                    str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-                                ].append(m)
-                                break
+                        for i in range(len(self.ids)):
+                            self.AL[i].send(packet)
 
+            except TypeError as e:
+                print(
+                    f"Error: {e}\n msg: {msg}",
+                )
+
+    def deliver_echo(self, msg):
+        # TODO checking if REQ FWD works
+
+        try:
+            # if self.selfid != 3 and self.selfid != 4 and self.selfid != 5:
+            self.bit_echo = True
+
+            flag_src_sn = (
+                str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
+            )
+            if flag_src_sn not in self.RECEIVEDECHO.keys():
+                self.RECEIVEDECHO[flag_src_sn] = []
+
+            if msg["FROM"] not in self.RECEIVEDECHO[flag_src_sn]:
+                self.RECEIVEDECHO[flag_src_sn].append(msg["FROM"])
+
+                flag_src_hash_sn = (
+                    str(msg["FLAG"])
+                    + str(msg["SOURCE"])
+                    + str(msg["HASH"])
+                    + str(msg["SEQUENCENUMBER"])
+                )
+                # used to avoid key error, it sets a default value of 0
+                self.COUNTER.setdefault(
+                    flag_src_hash_sn,
+                    0,
+                )
+
+                self.COUNTER[flag_src_hash_sn] += 1
+
+                src_hash_sn = (
+                    str(msg["SOURCE"]) + str(msg["HASH"]) + str(msg["SEQUENCENUMBER"])
+                )
+                # used not to generate the error
+                if src_hash_sn not in self.CodeSet.keys():
+                    self.CodeSet[src_hash_sn] = []
+
+                if bytes(msg["C"]) not in self.CodeSet[src_hash_sn]:
+                    
+                    self.CodeSet[src_hash_sn].append(bytes(msg["C"]))
+
+                if (
+                    self.COUNTER[
+                        str(msg["FLAG"])
+                        + str(msg["SOURCE"])
+                        + str(msg["HASH"])
+                        + str(msg["SEQUENCENUMBER"])
+                    ]
+                    >= self.faulty + 1
+                ):
+                    there_is = False
+                    src_sn = str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
+
+                    if src_sn not in self.MsgSet.keys():
+                        self.MsgSet[src_sn] = []
+                    for j in self.MsgSet[src_sn]:
+                        if self.__hash(j) == str(msg["HASH"]):
+                            there_is = True
+                            break
+
+                    if not there_is:
+                        
+                        src_hash_from = (
+                            str(msg["SOURCE"])
+                            + str(msg["HASH"])
+                            + str(msg["SEQUENCENUMBER"])
+                        )
+
+                        if src_hash_from not in self.CodeSet.keys():
+                            self.CodeSet[src_hash_from] = []
+
+                        subset = self.CodeSet[src_hash_from]
+
+                        c = self.get_powerset(subset)
+                        # c = list(itertools.combinations(subset, self.faulty + 1))
+                        
+                        print("TYPE",type(c),type(c[0]))
+                        for l in c:
+                            if (
+                                len(l) == self.faulty + 1
+                            ):  
+                                
+
+                                m = self.decode(l)
+
+                                hash_msg = self.__hash(m)
+
+                                if msg["HASH"] == hash_msg:
+                                    self.MsgSet[
+                                        str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
+                                    ].append(m)
+                                    break
+
+                self.bit_echo = False
+
+                self.check(msg["SOURCE"], msg["HASH"], msg["SEQUENCENUMBER"])
             self.bit_echo = False
 
-            self.check(msg["SOURCE"], msg["HASH"], msg["SEQUENCENUMBER"])
-        self.bit_echo = False
+        except TypeError as e:
+            print(
+                f"Error: {e}\n msg: {msg}",
+            )
+        except AttributeError as e:
+            print(
+                f"Error: {e}\n msg: {msg}",
+            )
 
     def deliver_acc(self, msg):
         flag_src_sn = str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
@@ -446,7 +424,7 @@ class Process:
     def deliver_fwd(self, msg):
         hash_msg = self.__hash(msg["MESSAGE"])
         flag_src_hash_msg = (
-            str(msg["FLAG"])
+            "REQ"  # str(msg["FLAG"])
             + str(msg["SOURCE"])
             + str(hash_msg)
             + str(msg["SEQUENCENUMBER"])
@@ -455,6 +433,8 @@ class Process:
         if flag_src_hash_msg not in self.SENTREQ.keys():
             self.SENTREQ[flag_src_hash_msg] = []
         # msg['FROM'] is the real id of the process
+
+        print("----- from sent req", msg["FROM"], self.SENTREQ)
         if msg["FROM"] in self.SENTREQ[flag_src_hash_msg]:
             flag_src_msg_sn = (
                 str(msg["FLAG"])
@@ -491,27 +471,25 @@ class Process:
                 >= self.faulty + 1
                 and ["ECHO", str(s), str(sn)] not in self.SentECHO
             ):
-                self.SentECHO.append(["ECHO", str(s), str(sn)])
-
-                number = 0
-                share = ""
-                for elem in self.CodeSet[str(s) + str(hash_msg) + str(sn)]:
-                    if elem[0] == self.selfid:
-                        number = elem[0]
-                        # share = elem[1].decode("latin-1")
-                        share = list(elem[1])
-                        break
-
+                self.SentECHO.append(["ECHO", str(s), str(sn)])   
+                
+                # Generate codeword for message 
+                temp_codeword = self.encode(message)
+                
+                # send coded element within an ECHO message to all processes
                 for i in range(len(self.ids)):
+                    
+                    coded_element = list(temp_codeword[i])
+                    
                     packet = {
                         "FLAG": "ECHO",
                         "FROM": str(self.selfid),
                         "SOURCE": str(s),
                         "HASH": str(hash_msg),
-                        "C": [number, share],
+                        "C": coded_element,
                         "SEQUENCENUMBER": str(sn),
                     }
-
+                    print("sending echo in check")
                     self.AL[i].send(packet)
 
             elif (
@@ -556,20 +534,17 @@ class Process:
                 >= len(self.ids) - self.faulty
             ):
                 msg = {"SOURCE": s, "MESSAGE": message, "SEQUENCENUMBER": sn}
+
+                
                 if not self.delivered:
+                    print(
+                        "--- COUNTER IN CHECK",
+                        self.COUNTER["ACC" + str(s) + str(hash_msg) + str(sn)],
+                        len(self.ids) - self.faulty,
+                    )
                     self.delivered = True
                     self.__deliver(msg["MESSAGE"])
-
-    def deliver_enc_inf(self, msg):
-        # decode message
-        msg.pop("FLAG", None)
-        dict_key = list(msg.keys())[0]
-
-        for i in range(len(msg[dict_key])):
-            # msg[dict_key][i] = msg[dict_key][i].encode("latin-1")
-            msg[dict_key][i] = bytes(msg[dict_key][i])
-
-        self.ENC_INF[dict_key] = msg[dict_key]
+    
 
     def __deliver(self, msg):
         # delivering the final message that is a dictionary
