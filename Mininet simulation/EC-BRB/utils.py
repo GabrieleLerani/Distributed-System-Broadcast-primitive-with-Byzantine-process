@@ -3,17 +3,58 @@ import struct
 import netifaces as ni
 import logging
 import os
+import signal
 import shutil
 import csv
 import string
 import random
+import time
+from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
 
-# convert list of list in list of tuples
-def list_to_tuple(l):
-    for i in range(len(l)):
-        l[i] = tuple(l[i])
-    return l
+def decode_json(data):
+    decoder = json.JSONDecoder()
+    pos = 0
+    while True:
+        try:
+            obj, pos = decoder.raw_decode(data, pos)
+        except json.JSONDecodeError as e:
+            print("Error: ", e)
+            return None
+        yield obj
+        if pos == len(data):
+            break
+
+
+def create_keys(n):
+    with open("symmetric_keys.csv", "w", newline="") as file:
+        writer = csv.writer(file)
+
+        keys = {}
+        for i in range(1, n + 1):
+            for j in range(1, n + 1):
+                if (i, j) not in keys and (j, i) not in keys:
+                    symm_key = ChaCha20Poly1305.generate_key().decode("latin1")
+                    keys[(i, j)] = symm_key
+                    writer.writerow([i, j, keys[i, j]])
+
+
+def get_key(id_p1, id_p2):
+    with open("symmetric_keys.csv", "r", newline="") as file:
+        reader = csv.reader(file)
+        for row in reader:
+            if (
+                str(id_p1) == row[0]
+                and str(id_p2) == row[1]
+                or str(id_p1) == row[1]
+                and str(id_p2) == row[0]
+            ):
+                return row[2].encode("latin-1")
+
+
+def end_app(pid, timer):
+    time.sleep(timer)
+    os.kill(pid, signal.SIGTERM)
 
 
 def serialize_json(message):
@@ -57,6 +98,7 @@ def set_process_logging(payload_size, rnd, sim_num):
     logging.basicConfig(
         format="%(asctime)s %(levelname)-8s %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
+        # TODO uncomment for simulations
         filename="debug/debug.process{ip}.log".format(ip=get_ip_of_interface()),
         # filename="simulations/payload_size{size}/round{round}/exec{sim_num}/debug_process{ip}.log".format(
         #    size=payload_size, sim_num=sim_num, round=rnd, ip=get_ip_of_interface()

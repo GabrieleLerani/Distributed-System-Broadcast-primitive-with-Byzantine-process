@@ -9,10 +9,9 @@ import time
 import itertools
 from pyeclib import ec_iface
 
-
 BROADCASTER_ID = 1
-
-
+DROP_MSG_ID = 10 # specify the id of the process which drops message with flag MSG
+DROP_ECHO_ID = 10 # specify the id of the process which drops message with flag ECHO
 
 class Process:
     def __init__(self):
@@ -43,15 +42,25 @@ class Process:
 
 
     def init_process(self):
+
+        # start tracing memory usage
         self.eval.tracing_start()
+
+        # get process ids
         self.init_process_ids()
+
+        # set number of faulty process allowed by the protocol
         self.faulty = math.floor((len(self.ids) - 1) / 3)
+        
+        # set number k of MDS 
         self.k = self.faulty + 1   # Number of data elements is n - 3f according to the theorem
         logging.debug("PROCESS: id list: %s,ip list %s", self.ids, self.ips)
         print("-----GATHERED ALL THE PEERS IPS AND IDS-----")
         print("-----STARTING SENDING OR RECEIVING MESSAGES-----")
 
     def init_process_ids(self):
+
+        # read process identifier from file where each row is <id,ip> 
         processes = utils.read_process_identifier()
         for pair in processes:
             self.ids.append(int(pair[0]))  # pair[0] --> ID
@@ -61,6 +70,8 @@ class Process:
         self.selfip = utils.get_ip_of_interface()
         self.selfid = self.ids[self.ips.index(self.selfip)]
         self.barrier = threading.Barrier(parties=2)
+        
+        # start receiving side
         for i in range(0, len(self.ids)):
             self.AL.append(
                 AuthenticatedLink.AuthenticatedLink(
@@ -69,10 +80,11 @@ class Process:
             )
             self.AL[i].receiver()
 
+        # trigger key exchange for authenticated link so that processes can exchange authentic messages
         for i in range(0, len(self.ids)):
             self.AL[i].key_exchange()
 
-    # message must be a string
+    
     @staticmethod
     def __hash(message):
         return hashlib.sha256(bytes(str(message), "utf-8")).hexdigest()
@@ -103,7 +115,7 @@ class Process:
         
         # encoder will generate n + k encoded element where k is f + 1
         encoded_data = ec_driver.encode(bytes(message,"utf-8"))
-        print("len:",len(encoded_data))
+        
         return encoded_data
 
     def decode(self,encoded_data):
@@ -111,6 +123,7 @@ class Process:
         ec_driver = ec_iface.ECDriver(k=self.k, m=len(self.ids), ec_type='liberasurecode_rs_vand')
         
         # decoder will decode correctly only if the input contains at least f + 1 uncorrupted coded elements
+        
         data = ec_driver.decode(encoded_data).decode("utf-8")
         return data
 
@@ -121,9 +134,10 @@ class Process:
             time.time() * 1000,
         )
 
-        
+        # get codeword from message m
         self.codeword = self.encode(message)
 
+        # send message to all other along with the corresponding coded element
         for i in range(len(self.ids)):
            
             message_to_send = {
@@ -143,9 +157,9 @@ class Process:
         # MESSAGE{'FLAG':flag,'FROM':from,'S':s}
         # id == 1 checks that the delivery is computed with the sender s that by convention it's the first
         # s is meant for the broadcaster or for the source of the message it changes something?
-        if self.selfid != 4:
-            try:
-                if (
+        if self.selfid != DROP_MSG_ID:
+            
+            if (
                     msg["FROM"] == msg["SOURCE"]
                     and ["MSG", str(msg["SOURCE"]), str(msg["SEQUENCENUMBER"])]
                     not in self.ReceivedMsg
@@ -209,17 +223,14 @@ class Process:
                         for i in range(len(self.ids)):
                             self.AL[i].send(packet)
 
-            except TypeError as e:
-                print(
-                    f"Error: {e}\n msg: {msg}",
-                )
+            
 
     def deliver_echo(self, msg):
-        # TODO checking if REQ FWD works
+        
 
-        try:
-            # if self.selfid != 3 and self.selfid != 4 and self.selfid != 5:
+        if self.selfid != DROP_ECHO_ID:
             self.bit_echo = True
+        
 
             flag_src_sn = (
                 str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
@@ -287,39 +298,33 @@ class Process:
 
                         subset = self.CodeSet[src_hash_from]
 
-                        c = self.get_powerset(subset)
-                        # c = list(itertools.combinations(subset, self.faulty + 1))
+                        # get all subset of length f + 1 from code set 
+                        c = list(itertools.combinations(subset, self.faulty + 1))
                         
-                        print("TYPE",type(c),type(c[0]))
+                        # remove first elements because it's an empty list:[]
+                        c.pop(0)
+                        
+                        # TODO remove
+                        
                         for l in c:
-                            if (
-                                len(l) == self.faulty + 1
-                            ):  
-                                
+                            
+                            # decode m from the set of encoded element
+                            m = self.decode(l)
 
-                                m = self.decode(l)
+                            hash_msg = self.__hash(m)
 
-                                hash_msg = self.__hash(m)
-
-                                if msg["HASH"] == hash_msg:
-                                    self.MsgSet[
-                                        str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
-                                    ].append(m)
-                                    break
+                            if msg["HASH"] == hash_msg:
+                                self.MsgSet[
+                                    str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
+                                ].append(m)
+                                break
 
                 self.bit_echo = False
 
                 self.check(msg["SOURCE"], msg["HASH"], msg["SEQUENCENUMBER"])
             self.bit_echo = False
 
-        except TypeError as e:
-            print(
-                f"Error: {e}\n msg: {msg}",
-            )
-        except AttributeError as e:
-            print(
-                f"Error: {e}\n msg: {msg}",
-            )
+        
 
     def deliver_acc(self, msg):
         flag_src_sn = str(msg["FLAG"]) + str(msg["SOURCE"]) + str(msg["SEQUENCENUMBER"])
@@ -379,7 +384,7 @@ class Process:
                         if req_src_hash_sn not in self.SENTREQ.keys():
                             self.SENTREQ[req_src_hash_sn] = []
                         if str(j + 1) not in self.SENTREQ[req_src_hash_sn]:
-                            # j + 1 is used both above and below because it is the real id of another process
+                            
                             self.SENTREQ[req_src_hash_sn].append(str(j + 1))
                             self.AL[j].send(packet)
 
@@ -489,7 +494,7 @@ class Process:
                         "C": coded_element,
                         "SEQUENCENUMBER": str(sn),
                     }
-                    print("sending echo in check")
+                    
                     self.AL[i].send(packet)
 
             elif (
@@ -509,7 +514,7 @@ class Process:
                     }
                     self.AL[i].send(packet)
 
-            # TODO
+            
             elif (
                 "ACC" + str(s) + str(hash_msg) + str(sn) in self.COUNTER.keys()
                 and self.COUNTER["ACC" + str(s) + str(hash_msg) + str(sn)]
@@ -555,20 +560,3 @@ class Process:
             time.time() * 1000,
             peak,
         )
-
-    def get_powerset(self, some_list):
-        if len(some_list) == 0:
-            return [[]]
-
-        subsets = []
-        first_element = some_list[0]
-        remaining_list = some_list[1:]
-        # Strategy: get all the subsets of remaining_list. For each
-        # of those subsets, a full subset list will contain both
-        # the original subset as well as a version of the subset
-        # that contains first_element
-        for partial_subset in self.get_powerset(remaining_list):
-            subsets.append(partial_subset)
-            subsets.append(partial_subset[:] + [first_element])
-
-        return subsets
