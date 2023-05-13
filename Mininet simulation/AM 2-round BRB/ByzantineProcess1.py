@@ -73,11 +73,20 @@ class ByzantineProcess(Process):
                         self.check(message)
 
             case 2:
+                # used to count verified message, if n - f then deliver
                 counter = 0
+
+                # store into a temp variable list of forwarded signed messages
                 temp_l = message["SIGNED_VOTE_MSGS"]
-                print(temp_l)
+                
+                print("SIGNED VOTE MSGS",temp_l)
                 if len(temp_l) == len(self.ids) - self.faulty and not self.delivered:
+                    
+                    # used to take trace for how many signs for a message
+                    messages = {}
+                    
                     for elem in temp_l:
+                        # temp key to reduce redundancy
                         key_to_check = (
                             elem["FLAG"],
                             elem["MSG"],
@@ -85,22 +94,31 @@ class ByzantineProcess(Process):
                             elem["FROM"],
                         )
 
-                        # TODO check if it works
+                        # check whether the message signature has already been checked
                         if key_to_check not in self.checked.keys():
                             
+                            # if no then check and store it
                             self.checked[key_to_check] = self.check_signature(
-                                elem.get("FLAG") + elem.get("MSG"),
-                                elem.get("SIGN"),
-                                elem.get("FROM"),
+                                elem["FLAG"] + elem["MSG"],
+                                elem["SIGN"],
+                                elem["FROM"],
                             )
 
-                        if self.checked[key_to_check]:
+                        # if signature is valid and the current message is really a VOTE increase the counter
+                        if self.checked[key_to_check] and "VOTE" == elem["FLAG"]:
                             counter += 1
+                            messages[elem["MSG"]] = counter
+                            
+                            # check whether there is a signed vote message with at least n - f signs
+                            # it is used to avoid to deliver a last message which is forged by the byzantine process
+                            msg_to_deliver = self.there_is_message(messages)
+                            print(messages)
+                            # when you have n-f valid message commit and close link
                             if counter == len(self.ids) - self.faulty:
                                 for i in range(len(self.ids)):
                                     self.L[i].link_send(message)
-                                    self.deliver(elem["MSG"])
-                                    super().__close_link()
+                                    self.deliver(msg_to_deliver)
+                                    self.close_link()
                                 
                 else:
                     logging.info(
@@ -150,3 +168,4 @@ class ByzantineProcess(Process):
             }
             for i in range(len(self.ids)):
                 self.L[i].link_send(vote_messages)
+                

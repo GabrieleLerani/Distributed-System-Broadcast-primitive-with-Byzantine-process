@@ -193,7 +193,7 @@ class Process:
                 # store into a temp variable list of forwarded signed messages
                 temp_l = message["SIGNED_VOTE_MSGS"]
                 
-                print("SIGNED VOTE MSGS",temp_l)
+                print("SIGNED VOTED MSGS",temp_l)
                 if len(temp_l) == len(self.ids) - self.faulty and not self.delivered:
                     
                     # used to take trace for how many signs for a message
@@ -226,13 +226,13 @@ class Process:
                             # check whether there is a signed vote message with at least n - f signs
                             # it is used to avoid to deliver a last message which is forged by the byzantine process
                             msg_to_deliver = self.there_is_message(messages)
-                            print(messages)
+                            
                             # when you have n-f valid message commit and close link
                             if counter == len(self.ids) - self.faulty:
                                 for i in range(len(self.ids)):
                                     self.L[i].link_send(message)
                                     self.deliver(msg_to_deliver)
-                                    self.__close_link()
+                                    self.close_link()
                                 
                 else:
                     logging.info(
@@ -241,7 +241,7 @@ class Process:
             case _:
                 logging.info("PROCESS:ERROR:Received a message of type undefined")
 
-    def __close_link(self):
+    def close_link(self):
         for j in range(0, len(self.ids)):
             self.L[j].ts.terminating_flag = True
             self.L[j].td.terminating_flag = True
