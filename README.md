@@ -1,3 +1,5 @@
+You can directly download git repository or you can find only src file here: https://drive.google.com/file/d/1is1QoL9cSV6SbpFSDZr76-XGgFn28ALA/view?usp=sharing
+
 1) Install python and pip if you don't have with:
 	```shell
 	sudo apt update  
