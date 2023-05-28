@@ -1,0 +1,57 @@
+2023-05-28 11:39:54 DEBUG    PROCESS: id list: [1, 2, 3, 4],ip list ['10.0.0.1', '10.0.0.2', '10.0.0.3', '10.0.0.4']
+2023-05-28 11:39:54 INFO     AUTH:Start thread to receive messages...
+2023-05-28 11:39:54 INFO     AUTH:Port used for receiving: 5012
+2023-05-28 11:39:54 INFO     AUTH:Start thread to receive messages...
+2023-05-28 11:39:54 INFO     AUTH:Port used for receiving: 5022
+2023-05-28 11:39:54 INFO     AUTH:Start thread to receive messages...
+2023-05-28 11:39:54 INFO     AUTH:Port used for receiving: 5032
+2023-05-28 11:39:54 INFO     AUTH:Start thread to receive messages...
+2023-05-28 11:39:54 INFO     AUTH:Port used for receiving: 5042
+2023-05-28 11:39:58 INFO     ----- EVALUATION CHECKPOINT: message receiving, time: 1685266798044.9143 -----
+2023-05-28 11:39:58 INFO     AUTH: <10.0.0.1, 1> -- sent this data {'MSG': 'h', 'HMAC': '2ca359112860136b1249fb1097e4bef3e4d246ed93da36ec6f10eec64d147d04', 'FLAG': 'SEND'}
+2023-05-28 11:39:58 INFO     AUTH: Port used to connect: 5021 to <10.0.0.1,1>
+2023-05-28 11:39:58 INFO     AUTH:Received DATA: b''
+2023-05-28 11:39:58 INFO     AUTH: {'MSG': 'h', 'HMAC': '32f501ebbf7c7a8b2032aff9b45550d013d690768d2e093f4e7374a24a7f784c', 'FLAG': 'ECHO'} sent to <10.0.0.1, 1>
+2023-05-28 11:39:58 INFO     AUTH: Port used to connect: 5022 to <10.0.0.2,2>
+2023-05-28 11:39:58 INFO     AUTH: {'MSG': 'h', 'HMAC': 'f8cc117d4a65911c7ceda0594b859489a834cafd7737958b928d1432d27c2429', 'FLAG': 'ECHO'} sent to <10.0.0.2, 2>
+2023-05-28 11:39:58 INFO     AUTH: Port used to connect: 5023 to <10.0.0.3,3>
+2023-05-28 11:39:58 INFO     ----- EVALUATION CHECKPOINT: message receiving, time: 1685266798057.6697 -----
+2023-05-28 11:39:58 INFO     AUTH: <10.0.0.2, 2> -- sent this data {'MSG': 'h', 'HMAC': 'f8cc117d4a65911c7ceda0594b859489a834cafd7737958b928d1432d27c2429', 'FLAG': 'ECHO'}
+2023-05-28 11:39:58 INFO     PROCESS: --------ECHOS VALUE: {2: 'h'}:
+2023-05-28 11:39:58 INFO     AUTH:Received DATA: b''
+2023-05-28 11:39:58 INFO     AUTH: {'MSG': 'h', 'HMAC': '0373ef2294e8e14d8ccbf4d2e848cb9fa6e5d9bbf62876cdafd557a08641b0cc', 'FLAG': 'ECHO'} sent to <10.0.0.3, 3>
+2023-05-28 11:39:58 INFO     AUTH: Port used to connect: 5024 to <10.0.0.4,4>
+2023-05-28 11:39:58 INFO     ----- EVALUATION CHECKPOINT: message receiving, time: 1685266798077.459 -----
+2023-05-28 11:39:58 INFO     AUTH: <10.0.0.3, 3> -- sent this data {'MSG': 'h', 'HMAC': '0373ef2294e8e14d8ccbf4d2e848cb9fa6e5d9bbf62876cdafd557a08641b0cc', 'FLAG': 'ECHO'}
+2023-05-28 11:39:58 INFO     PROCESS: --------ECHOS VALUE: {2: 'h', 3: 'h'}:
+2023-05-28 11:39:58 INFO     AUTH:Received DATA: b''
+2023-05-28 11:39:58 INFO     AUTH: {'MSG': 'h', 'HMAC': '9653cac56c855f63a263653a4bb4506ffc7b49a600c253bca0e1aceb9ea2f731', 'FLAG': 'ECHO'} sent to <10.0.0.4, 4>
+2023-05-28 11:39:58 INFO     AUTH: <10.0.0.1, 1> -- sent this data {'MSG': 'h', 'HMAC': '32f501ebbf7c7a8b2032aff9b45550d013d690768d2e093f4e7374a24a7f784c', 'FLAG': 'ECHO'}
+2023-05-28 11:39:58 INFO     PROCESS: --------ECHOS VALUE: {2: 'h', 3: 'h', 1: 'h'}:
+2023-05-28 11:39:58 INFO     AUTH:Received DATA: b''
+2023-05-28 11:39:58 INFO     AUTH: <10.0.0.1, 1> -- sent this data {'MSG': 'h', 'HMAC': 'a807bc9a5ca5aac40137e66e4d1203dcf2ac86c0539760538722e063ca788937', 'FLAG': 'READY'}
+2023-05-28 11:39:58 INFO     AUTH: Port used to connect: 5021 to <10.0.0.1,1>
+2023-05-28 11:39:58 INFO     PROCESS: --------READYS VALUE: {1: 'h'}:
+2023-05-28 11:39:58 INFO     AUTH:Received DATA: b''
+2023-05-28 11:39:58 INFO     AUTH: {'MSG': 'h', 'HMAC': 'a807bc9a5ca5aac40137e66e4d1203dcf2ac86c0539760538722e063ca788937', 'FLAG': 'READY'} sent to <10.0.0.1, 1>
+2023-05-28 11:39:58 INFO     ----- EVALUATION CHECKPOINT: message receiving, time: 1685266798090.665 -----
+2023-05-28 11:39:58 INFO     AUTH: Port used to connect: 5022 to <10.0.0.2,2>
+2023-05-28 11:39:58 INFO     AUTH: <10.0.0.4, 4> -- sent this data {'MSG': 'h', 'HMAC': '9653cac56c855f63a263653a4bb4506ffc7b49a600c253bca0e1aceb9ea2f731', 'FLAG': 'ECHO'}
+2023-05-28 11:39:58 INFO     AUTH: {'MSG': 'h', 'HMAC': 'a78eb97abe0405162288d3e3e6ddfde9ab8f89fccf112fe33f078942f33ffd28', 'FLAG': 'READY'} sent to <10.0.0.2, 2>
+2023-05-28 11:39:58 INFO     PROCESS: --------ECHOS VALUE: {2: 'h', 3: 'h', 1: 'h', 4: 'h'}:
+2023-05-28 11:39:58 INFO     AUTH:Received DATA: b''
+2023-05-28 11:39:58 INFO     AUTH: Port used to connect: 5023 to <10.0.0.3,3>
+2023-05-28 11:39:58 INFO     AUTH: <10.0.0.2, 2> -- sent this data {'MSG': 'h', 'HMAC': 'a78eb97abe0405162288d3e3e6ddfde9ab8f89fccf112fe33f078942f33ffd28', 'FLAG': 'READY'}
+2023-05-28 11:39:58 INFO     PROCESS: --------READYS VALUE: {1: 'h', 2: 'h'}:
+2023-05-28 11:39:58 INFO     AUTH:Received DATA: b''
+2023-05-28 11:39:58 INFO     AUTH: {'MSG': 'h', 'HMAC': '3b62d2f5cd216fe8feac5eb52fced011ef612b31ef241d547d91d104e6e46019', 'FLAG': 'READY'} sent to <10.0.0.3, 3>
+2023-05-28 11:39:58 INFO     AUTH: Port used to connect: 5024 to <10.0.0.4,4>
+2023-05-28 11:39:58 INFO     AUTH: {'MSG': 'h', 'HMAC': '95b0fdbf01c6154eb9e97b3f59f72f5a04249dd48c7cbfaf2e4cca31803cfcce', 'FLAG': 'READY'} sent to <10.0.0.4, 4>
+2023-05-28 11:39:58 INFO     AUTH: <10.0.0.3, 3> -- sent this data {'MSG': 'h', 'HMAC': '3b62d2f5cd216fe8feac5eb52fced011ef612b31ef241d547d91d104e6e46019', 'FLAG': 'READY'}
+2023-05-28 11:39:58 INFO     PROCESS: --------READYS VALUE: {1: 'h', 2: 'h', 3: 'h'}:
+2023-05-28 11:39:58 INFO     AUTH:Received DATA: b''
+2023-05-28 11:39:58 INFO     AUTH: <10.0.0.4, 4> -- sent this data {'MSG': 'h', 'HMAC': '95b0fdbf01c6154eb9e97b3f59f72f5a04249dd48c7cbfaf2e4cca31803cfcce', 'FLAG': 'READY'}
+2023-05-28 11:39:58 INFO     PROCESS: --------READYS VALUE: {1: 'h', 2: 'h', 3: 'h', 4: 'h'}:
+2023-05-28 11:39:58 INFO     AUTH:Received DATA: b''
+2023-05-28 11:39:58 INFO     ----- MESSAGE DELIVERED, time: 1685266798136.604, size: 0.06104469299316406
+2023-05-28 11:39:58 INFO     BYTES SENT: 0
