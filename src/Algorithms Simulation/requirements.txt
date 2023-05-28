@@ -1,0 +1,9 @@
+pycryptodome
+cryptography
+netifaces
+numpy
+pandas
+matplotlib
+psutil
+mininet
+pyeclib

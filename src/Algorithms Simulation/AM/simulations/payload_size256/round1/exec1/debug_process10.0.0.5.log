@@ -1,0 +1,329 @@
+2023-05-27 19:17:10 INFO     PROCESS:Calling KDS to get key pair
+2023-05-27 19:17:10 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:11 DEBUG    PROCESS: id list: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],ip list ['10.0.0.1', '10.0.0.2', '10.0.0.3', '10.0.0.4', '10.0.0.5', '10.0.0.6', '10.0.0.7', '10.0.0.8', '10.0.0.9', '10.0.0.10', '10.0.0.11', '10.0.0.12', '10.0.0.13', '10.0.0.14', '10.0.0.15', '10.0.0.16', '10.0.0.17', '10.0.0.18', '10.0.0.19', '10.0.0.20']
+2023-05-27 19:17:13 INFO     ----- EVALUATION CHECKPOINT: message receiving, time: 1685207833387.533 -----
+2023-05-27 19:17:13 INFO     AUTH: <10.0.0.1, 1> is the one with this key: {1: b'S\xa6\xad\xb2\x7f\xb7\xfe\xc4\x05\x13\xf9@\xc1\x80\x82\xb5D|\xc6\x08\rw\xedo\x7f\xf7{i\\h\x974'}
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:13 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:14 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:14 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Connecting to KDS
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PUBLIC KEYS: {'1': {'N': 113560735251637527383315575774983562827156763570408607252037132732204049169361609287058999412673351758907172355856950494609844850219435094806623514257801611111148287618711920315608217380972013723231646662892260092471135340212082315937762970059030865120340681054233331547765365795403829492864991516269928874733, 'E': 65537}, '2': {'N': 142386711450461568463093881262064813489498624823973048217426218834582907403808254554678610074989811142813451612551899224195610566836063246642278141093090777241975046785242460722087890994240481098840947867232419429250014904393704453749292783027075343840240991372890119770790786901282879468768866575238902866683, 'E': 65537}, '3': {'N': 104144222611641868610654335191882265273110002126374621873036804222507746444471491607434121101099786664705573924995031256146646290585678839188654338191104882293066597980262308344556146626955765072278497291123815623794190757746533872291499196041002554224812651765909258352495625924582444579494805813321893660531, 'E': 65537}, '4': {'N': 151051865726839416534479048610829884408161202046965507812989209139989545620346706276340337056750093379189523928648106882654138385141512461955485872475842205388193517750202504162763080068907120231582865214923907530802897683517029440682682145914890479979207565896367328048132611492952304099451442949996890938399, 'E': 65537}, '5': {'N': 123372902101665294032830679510404034346168766904239927060351345212775801658498478578056222195421479158789064542809475601384703042303363373554211112151273476095229519485330597503497752345033326808348185265430324020912297455161499559051292862948905744933846903308429738445229471065758695418739308685023731630677, 'E': 65537}, '6': {'N': 109072728441097509529691863652976553770422852515076069499258104221952836075426116566481697657623538339180348797543802791304934195757751472469211579927584704854050028418940289540718271635977399966150040997252216497897664672143296935092985896527885374650717087679829634934077935633103875766532445901766291008389, 'E': 65537}, '7': {'N': 122376537172431995983210365775743762194754455874812969431817008824502506929570824148083874284360510595639400677903633836041107481292905364565328735182906204337977762190453478033770687242800467434858924789388056377568694462708639558718026992806662794266209831746012092672499822391591601751452612804948789570321, 'E': 65537}, '8': {'N': 123777929098831037668037349697256804622384233309286540126202671492947398041439665736395285703975601135222609085443460072138529548305697799027710706873181534609968753460758841915529083045830214274442704076801015192158522994776029973850927828326942029378857395265825758422762452445257396601956115148263305003693, 'E': 65537}, '9': {'N': 105264747164598158088115891762059720016734984645176752413320515708457402800607594284709848532263639179890151409443561643012339941653527854782367462291329824280691563928297314832454349461742570465525880215502841812815334982813052371691063050710206901097648310679402557746363548992088670890870878615054764756903, 'E': 65537}, '10': {'N': 143812982218793625025934050976853676515185665031851881880170792285148812132282784452139024186383224042243957041669782272290619167654987071081057908828018245191749454254654481169162994832796018907223407714747571538690770073653541258645223239531879847630295156579648070711575131457353869816888738643222956674863, 'E': 65537}, '11': {'N': 106928259362343027375701464638956568152041108100174403121669583788020829094409114139513162467216356813446652370346656003212377594893517247309916749597602311324547176574915445173712411562843044315997410292317033303730526843532135273384927468884896107137007246949170901987556535718224160062237369284275131545763, 'E': 65537}, '12': {'N': 142037318100307036143436130638913060064799803184578187562082502527045177932676632218131897022240091221980061643109985317023881158326191743488941542540480450105769124734252916276150394081644562858461503404230599583776341253761819927359397695328586529016457145591964059895390730252910090209695544091241650709709, 'E': 65537}, '13': {'N': 116540015068648062871717618148310185540844935231536631031952197710063604305379675905640016668407208298853919895183604629092727700927445727671014314750410179443346825857207740512484892831065633187367203470461004256407579495982161459151374419663907910157862691598746658650705259551179241979248730863976777294053, 'E': 65537}, '14': {'N': 129406111308645718023647856610125864010173313118981079166666918476550985951095414556321175836081077526005912161440841181939334462770608222462880796693471440570024762856175567042602252114677073596053793316285827819632762095316466969397395674595640194910719108954024446368905953057990258459032391051883797932023, 'E': 65537}, '15': {'N': 139646903005994351782051163633481939450346635361629193399740813038047154516935084603069422075526628871210549227485894054399225023370730571587962456087510901245474789314756796162203805206755101073608672624899393017296295764523858712682415008619448300411792977216979969489385542050620334009921383634555971948283, 'E': 65537}, '16': {'N': 125077446759759302792636984083404292411849132508627317910401737103046278512276392265322057382703328773639403406101113981733109477537869710922141946539443004055908550841321353618144079351822200167086124062069740687528911571570353577002940641297046257251113692257494300189815144857510300546756494233121589836713, 'E': 65537}, '17': {'N': 135719627104140872792959829670159673427790011098301158254736148128990466008259163493628465032319789115784420407054615150896625362450862979102716705154019220765745463275115646857764897790076895003535182831044993598568774375494691260926140339432695214063230526065918381437958081834800409733522176970927945339941, 'E': 65537}, '18': {'N': 122218320723206170981218991659692927621652411163542731258360679515730841537566407756677682566453464508548995055284824184506157540930924447544994645995699474793166033955643146776674304221617831026665747877765952618396424026076925659647305064453028762431410771037066815761424756272118520392991498855152035088209, 'E': 65537}, '19': {'N': 136330183824928824084512202929525791435309483068365706664479604498202800945433739258670180136146741049561979191313458135855187623829961895142193354241397002042237675788823899889280530795847794664724207885108689431814236248796353127227486855930364788620682250243984006862825187690160431297330061831465803558091, 'E': 65537}, '20': {'N': 140626749375166709519919042007150666647477508179148265927017861786444576297648368896157780911855119140584179920087330973264462417171781478683629695907124628349188788663360695111815005014743639525983651046620637390904005290218247448578710356933174877777469453137593528666211980517189697692242853721019860765309, 'E': 65537}}
+2023-05-27 19:17:14 INFO     PROCESS:Signature:<0x390f609da8ef11fef1b230eef01342c678ca991ce490ef1fcf4ffaf0b1033db549560ea8aac5621e42706333ffd3437bf414c61361c6e8a9aa2c9041ee83d80f4935de1377d78320fbeb255fd4578e0c6a31e98574ae6514e5cd8c1f86b16f3228fc844a0174997494ce0da912c7ec99bbf14104d213518282e6e320edb0fb38>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Vote message:{'FLAG': 'VOTE', 'MSG': 'hozzhtstcsgdlvfulvbvzihzijwnoxdswkadowhrvejfarornmfaddpfqlxdpfbxcirxtttojzwurnivipgrmwbxtrkhcqbxttoitoapmliyfncaurvwjgxvapafaxkaslxwiuxlhffmyuvlbevcigqkzmpppsakizxnffpgbqxnbfldvscxrwufqdjeqxvwyjevwrbjgjhqdvnmomossuqjrhksigaqmvhfausjxizumbvlorrbhdynvjpqgvnj', 'SIGN': 40068942383679542897698397366540820183075620681602795182799277119157040412396553009778426108938754478237628129781685431263646822037418512110054347265430587166028333998558035844055040203995173261169346302757161866996537834779540270976811482684914718063757549936393921965379151638268935029167215111723803540280, 'TYPE': 1, 'FROM': 5},broadcasted successfully
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Signature check exit:<True>
+2023-05-27 19:17:14 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:14 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:14 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:14 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:14 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:14 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     ----- MESSAGE DELIVERED, time: 1685207835112.5334, size: 0.4834175109863281
+2023-05-27 19:17:15 INFO     BYTES SENT: 249
+2023-05-27 19:17:15 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     BYTES SENT: 310
+2023-05-27 19:17:15 INFO     BYTES SENT: 318
+2023-05-27 19:17:15 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     BYTES SENT: 326
+2023-05-27 19:17:15 INFO     BYTES SENT: 335
+2023-05-27 19:17:15 INFO     BYTES SENT: 352
+2023-05-27 19:17:15 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:15 INFO     BYTES SENT: 415
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     BYTES SENT: 432
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     BYTES SENT: 582
+2023-05-27 19:17:16 INFO     BYTES SENT: 591
+2023-05-27 19:17:16 INFO     BYTES SENT: 599
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:16 INFO     BYTES SENT: 656
+2023-05-27 19:17:17 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:17 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:17 INFO     BYTES SENT: 673
+2023-05-27 19:17:17 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:17 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:17 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:17 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:17 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     BYTES SENT: 721
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     BYTES SENT: 785
+2023-05-27 19:17:18 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:18 INFO     BYTES SENT: 794
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     BYTES SENT: 841
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     BYTES SENT: 850
+2023-05-27 19:17:19 INFO     BYTES SENT: 858
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     BYTES SENT: 876
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     BYTES SENT: 917
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:19 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     BYTES SENT: 947
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     BYTES SENT: 1008
+2023-05-27 19:17:20 INFO     BYTES SENT: 1016
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     BYTES SENT: 1074
+2023-05-27 19:17:20 INFO     BYTES SENT: 1074
+2023-05-27 19:17:20 INFO     BYTES SENT: 1091
+2023-05-27 19:17:20 INFO     BYTES SENT: 1091
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:20 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     BYTES SENT: 1099
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     BYTES SENT: 1118
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     BYTES SENT: 1139
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     BYTES SENT: 1179
+2023-05-27 19:17:21 INFO     BYTES SENT: 1187
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     BYTES SENT: 1196
+2023-05-27 19:17:21 INFO     BYTES SENT: 1204
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     BYTES SENT: 1225
+2023-05-27 19:17:21 INFO     BYTES SENT: 1244
+2023-05-27 19:17:21 INFO     BYTES SENT: 1252
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     BYTES SENT: 1283
+2023-05-27 19:17:21 INFO     BYTES SENT: 1291
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     BYTES SENT: 1321
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     BYTES SENT: 1330
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     BYTES SENT: 1347
+2023-05-27 19:17:21 INFO     BYTES SENT: 1347
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     BYTES SENT: 1397
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:21 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     BYTES SENT: 1418
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     BYTES SENT: 1447
+2023-05-27 19:17:22 INFO     BYTES SENT: 1467
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     BYTES SENT: 1484
+2023-05-27 19:17:22 INFO     BYTES SENT: 1484
+2023-05-27 19:17:22 INFO     BYTES SENT: 1493
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     BYTES SENT: 1511
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     BYTES SENT: 1541
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     BYTES SENT: 1550
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     BYTES SENT: 1590
+2023-05-27 19:17:22 INFO     BYTES SENT: 1599
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     BYTES SENT: 1629
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:22 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     BYTES SENT: 1649
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     BYTES SENT: 1657
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     BYTES SENT: 1677
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     BYTES SENT: 1695
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     BYTES SENT: 1704
+2023-05-27 19:17:23 INFO     BYTES SENT: 1712
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     BYTES SENT: 1743
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:23 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     BYTES SENT: 1783
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     BYTES SENT: 1792
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     BYTES SENT: 1800
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     BYTES SENT: 1819
+2023-05-27 19:17:24 INFO     BYTES SENT: 1839
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     PROCESS:Already delivered not re-broadcast all the signed vote messages
+2023-05-27 19:17:24 INFO     BYTES SENT: 1902

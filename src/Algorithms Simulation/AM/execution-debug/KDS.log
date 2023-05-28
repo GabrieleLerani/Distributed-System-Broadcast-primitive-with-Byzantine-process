@@ -1,0 +1,93 @@
+INFO:root:KDS: Initializing KDS
+INFO:root:SERVER: connection from ('10.0.0.1', 52682)
+INFO:root:KDS: request to generate public/private key pair
+INFO:root:Generating key for process
+INFO:root:Public key:  (n=0x9cc09300d9889c09f5be9e1a1951eb911d73f92599cdf893edf0d86a1012b24504140240f54b3dff9ed5546a9e42e94fe70cff4ca44bc3bbc91497a630b64f9b00c844d4e4f4805ae319a715a68d636335af81fe30d5bf71240889ae33ac9fecd3f00f9ced24cc2e54132274cf122fdb7c32bde9782848e818b21ba9911eca2b, e=0x10001)
+INFO:root:Private key: (n=0x9cc09300d9889c09f5be9e1a1951eb911d73f92599cdf893edf0d86a1012b24504140240f54b3dff9ed5546a9e42e94fe70cff4ca44bc3bbc91497a630b64f9b00c844d4e4f4805ae319a715a68d636335af81fe30d5bf71240889ae33ac9fecd3f00f9ced24cc2e54132274cf122fdb7c32bde9782848e818b21ba9911eca2b, d=0x3b02c454ad90202e1fb5830f9038a6d61aa06e4b197bd0f8dfbaabbe420ec7cdf39b14be1f9a13dd078e88191b3b555a1f41655b14fef0d0e1023f94f101b135b25499100de219665efa7b09782bfd4f032dcb1b279bda14582c3d98b2cb17d8e5da50a0f0b70bcc6ce622b655e895315af2ced2f3880d296958ac6203edae01)
+INFO:root:KDS:Public key of 1 registered
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.2', 32884)
+INFO:root:KDS: request to generate public/private key pair
+INFO:root:Generating key for process
+INFO:root:Public key:  (n=0xca4297c785fbe4b65ed4ba02003c82189906274b130248e1929f4d7f8a3ecb504e069a0141a7381d6730e84ff0b444dc974fbdd690559f72ad76d103656b2991847ff8d82e6b68f48ca72c43795f096ede4ce4b0f964c8107c1abd3e0f2c245e7b6e9827026176679baea8969c1462b499ff2668abdd93dd1f1161b744250857, e=0x10001)
+INFO:root:Private key: (n=0xca4297c785fbe4b65ed4ba02003c82189906274b130248e1929f4d7f8a3ecb504e069a0141a7381d6730e84ff0b444dc974fbdd690559f72ad76d103656b2991847ff8d82e6b68f48ca72c43795f096ede4ce4b0f964c8107c1abd3e0f2c245e7b6e9827026176679baea8969c1462b499ff2668abdd93dd1f1161b744250857, d=0xd81b9f20c8c003f7f80b4353affcf6e4615c79cf75581397319a94ab9982cea9d734a6888125b287782281962891f4a1ddea8de41c03e0821f65bc9dec573be920da6cc658c31c24d45ed02dae186708728e67fd5917593ad8dd7f3c29de99e489bbcd2f7d21ca2eca67893639b5474d34c02ef41466c4acf5d38ec87d86e31)
+INFO:root:KDS:Public key of 2 registered
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.4', 43574)
+INFO:root:KDS: request to generate public/private key pair
+INFO:root:Generating key for process
+INFO:root:Public key:  (n=0xcbd22307e80d4ab94416ed3c1b09f879f9093848028f4979e7e9394c274a9e67a199154eda0f0defe8706997143fa934e71d0cfc98ebe127537582981b8eadc463397de28b883283006f3e2bb4df048b5c9c0d478f754e4c9d9bb6ced3ee25e507af87e4e286ffd8ca3d1d940c246322f28727f7343e173be3128b904c61a801, e=0x10001)
+INFO:root:Private key: (n=0xcbd22307e80d4ab94416ed3c1b09f879f9093848028f4979e7e9394c274a9e67a199154eda0f0defe8706997143fa934e71d0cfc98ebe127537582981b8eadc463397de28b883283006f3e2bb4df048b5c9c0d478f754e4c9d9bb6ced3ee25e507af87e4e286ffd8ca3d1d940c246322f28727f7343e173be3128b904c61a801, d=0x6b011a963f3d87fd555b80ca73cdfb720db2c97304b1ceae31790c9bbb383e57c34bce4a6430b653a3b42d54bd4caebbe4335c37a7442ef0767a07af6d2eae0aaf6f0b34a5611d98bdd094eeb316798ac787f944b4c689782abf25327933f50ae9a5cab697e439bd576a230a49be99e3282caf9f0786840ebfd00d0f8a26001)
+INFO:root:KDS:Public key of 4 registered
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.3', 48244)
+INFO:root:KDS: request to generate public/private key pair
+INFO:root:Generating key for process
+INFO:root:Public key:  (n=0xcd104665b763ce8bc9adb062c36950222f6b202912f8cb1fa7a5bedeace6740bada90e03af6f93e42c545a5fbab7e409dab538fc00f1ae3e69ec3c25b6e15afb687bd33b7a5c2ebdb65b990f689618dfa6a1b6a1f8a46d78e03d3ab2296a7e30c6cbaca9a629b5a640eb772247c2f92add7b85dda852ce705befb92fe742ec2d, e=0x10001)
+INFO:root:Private key: (n=0xcd104665b763ce8bc9adb062c36950222f6b202912f8cb1fa7a5bedeace6740bada90e03af6f93e42c545a5fbab7e409dab538fc00f1ae3e69ec3c25b6e15afb687bd33b7a5c2ebdb65b990f689618dfa6a1b6a1f8a46d78e03d3ab2296a7e30c6cbaca9a629b5a640eb772247c2f92add7b85dda852ce705befb92fe742ec2d, d=0x12c27fe6334a46ad8424472429e35b08dd94abcb0628cb90584a71f53615191dae63ee5bc8f368b0b19b7fef0d0a60aac41edb1936cee555616452b6528e383fe8a35aea7e5b629799ee5b94ef8a7039fd2d30065361b9b838a9c9ec22a3df34ba25e2b9ca6afdaa8f23df8352ce6df41feb0e1c4d15a63a01c15d1003084361)
+INFO:root:KDS:Public key of 3 registered
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.1', 47382)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 1 sent
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.1', 47398)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 2 sent
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.1', 47400)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 3 sent
+INFO:root:SERVER: connection from ('10.0.0.2', 39112)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 1 sent
+INFO:root:KDS:No more data from client
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.1', 47414)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 4 sent
+INFO:root:SERVER: connection from ('10.0.0.2', 39124)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 2 sent
+INFO:root:KDS:No more data from client
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.2', 39134)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 3 sent
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.2', 39142)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 4 sent
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.3', 48258)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 1 sent
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.3', 48268)
+INFO:root:SERVER: connection from ('10.0.0.4', 39530)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 1 sent
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 2 sent
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.3', 48272)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 3 sent
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.3', 48274)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 4 sent
+INFO:root:KDS:No more data from client
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.4', 39546)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 2 sent
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.4', 39550)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 3 sent
+INFO:root:KDS:No more data from client
+INFO:root:SERVER: connection from ('10.0.0.4', 39558)
+INFO:root:KDS: requested a public key
+INFO:root:KDS:Public key of 4 sent
+INFO:root:KDS:No more data from client
