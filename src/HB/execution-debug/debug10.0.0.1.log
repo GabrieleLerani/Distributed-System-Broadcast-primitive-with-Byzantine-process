@@ -1,0 +1,57 @@
+2023-05-28 10:45:29 DEBUG    PROCESS: id list: [1, 2, 3, 4],ip list ['10.0.0.1', '10.0.0.2', '10.0.0.3', '10.0.0.4']
+2023-05-28 10:45:33 INFO     ----- EVALUATION CHECKPOINT: broadcast start, time: 1685263533525.4058 -----
+2023-05-28 10:45:33 INFO     {'Flag': 'MSG', 'Source': 1, 'Message': 'hello', 'SequenceNumber': 0, 'HMAC': '3fca924e8a03053e9fe4290fa1042a0c51793c37afe439f3edb047cc0b73f991'} sento to <10.0.0.1,1>
+2023-05-28 10:45:33 INFO     ----- EVALUATION CHECKPOINT: message receiving, time: 1685263533528.626 -----
+2023-05-28 10:45:33 INFO     Message received by 10.0.0.1: {'Flag': 'MSG', 'Source': 1, 'Message': 'hello', 'SequenceNumber': 0, 'HMAC': '3fca924e8a03053e9fe4290fa1042a0c51793c37afe439f3edb047cc0b73f991'}
+2023-05-28 10:45:33 INFO     {'Flag': 'MSG', 'Source': 1, 'Message': 'hello', 'SequenceNumber': 0, 'HMAC': '4577a395dec4057b42cdb17669b86664a2b9db204f907716bc88535dcc73eccb'} sento to <10.0.0.2,2>
+2023-05-28 10:45:33 INFO     ----- EVALUATION CHECKPOINT: message receiving, time: 1685263533551.937 -----
+2023-05-28 10:45:33 INFO     Message received by 10.0.0.2: {'Flag': 'ECHO', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': 'f6810d215b7732be73e9c0233805b0dc24e6d67460fc9dec3729dcc73f62fe50'}
+2023-05-28 10:45:33 INFO     ECHOS COUNTER: {('ECHO', 1, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 0): 1}, ECHOS RECEIVED:[['ECHO', 1, 0, 2]] ECHOS SENT: []
+2023-05-28 10:45:33 INFO     MSG SET {(1, 0): ['hello']}
+2023-05-28 10:45:33 INFO     ACC COUNTER: {}, ACC RECEIVED:[] ACC SENT: []
+2023-05-28 10:45:33 INFO     {'Flag': 'MSG', 'Source': 1, 'Message': 'hello', 'SequenceNumber': 0, 'HMAC': 'aa051e026fb1853c2fd53ce347e757b0e93dae64b30691d6004bdd0d5e515c66'} sento to <10.0.0.3,3>
+2023-05-28 10:45:33 INFO     ----- EVALUATION CHECKPOINT: message receiving, time: 1685263533571.417 -----
+2023-05-28 10:45:33 INFO     Message received by 10.0.0.3: {'Flag': 'ECHO', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': '24e7e7dcb248d7529d9dfffaec99c51cf4301f192a057c079ec42ce2ca550a98'}
+2023-05-28 10:45:33 INFO     ECHOS COUNTER: {('ECHO', 1, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 0): 2}, ECHOS RECEIVED:[['ECHO', 1, 0, 2], ['ECHO', 1, 0, 3]] ECHOS SENT: []
+2023-05-28 10:45:33 INFO     MSG SET {(1, 0): ['hello']}
+2023-05-28 10:45:33 INFO     ACC COUNTER: {}, ACC RECEIVED:[] ACC SENT: []
+2023-05-28 10:45:33 INFO     {'Flag': 'ECHO', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': '977e9c62b3e35aacbb37f72c965e5de92da8a726ae122c9899621dfad3d51eb6'} sento to <10.0.0.1,1>
+2023-05-28 10:45:33 INFO     {'Flag': 'MSG', 'Source': 1, 'Message': 'hello', 'SequenceNumber': 0, 'HMAC': '8b509104fca0fc2aedd92d8b2a5fdabe6221061a95ac08e8ddfa35b3a0443dfa'} sento to <10.0.0.4,4>
+2023-05-28 10:45:33 INFO     Message received by 10.0.0.1: {'Flag': 'ECHO', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': '977e9c62b3e35aacbb37f72c965e5de92da8a726ae122c9899621dfad3d51eb6'}
+2023-05-28 10:45:33 INFO     ECHOS COUNTER: {('ECHO', 1, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 0): 3}, ECHOS RECEIVED:[['ECHO', 1, 0, 2], ['ECHO', 1, 0, 3], ['ECHO', 1, 0, 1]] ECHOS SENT: [['ECHO', 1, 0]]
+2023-05-28 10:45:33 INFO     MSG SET {(1, 0): ['hello']}
+2023-05-28 10:45:33 INFO     ACC COUNTER: {}, ACC RECEIVED:[] ACC SENT: []
+2023-05-28 10:45:33 INFO     Echos received: [['ECHO', 1, 0, 2], ['ECHO', 1, 0, 3], ['ECHO', 1, 0, 1]]
+2023-05-28 10:45:33 INFO     {'Flag': 'ECHO', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': 'f6810d215b7732be73e9c0233805b0dc24e6d67460fc9dec3729dcc73f62fe50'} sento to <10.0.0.2,2>
+2023-05-28 10:45:33 INFO     -----ACC PHASE-----
+2023-05-28 10:45:33 INFO     {'Flag': 'ACC', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': '7f4c48d83cb3970bb152fb474257d4508413f7d13087b690094694c8d9a88d6b'} sento to <10.0.0.1,1>
+2023-05-28 10:45:33 INFO     Message received by 10.0.0.1: {'Flag': 'ACC', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': '7f4c48d83cb3970bb152fb474257d4508413f7d13087b690094694c8d9a88d6b'}
+2023-05-28 10:45:33 INFO     ECHOS COUNTER: {('ECHO', 1, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 0): 3}, ECHOS RECEIVED:[['ECHO', 1, 0, 2], ['ECHO', 1, 0, 3], ['ECHO', 1, 0, 1]] ECHOS SENT: [['ECHO', 1, 0]]
+2023-05-28 10:45:33 INFO     {'Flag': 'ECHO', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': '24e7e7dcb248d7529d9dfffaec99c51cf4301f192a057c079ec42ce2ca550a98'} sento to <10.0.0.3,3>
+2023-05-28 10:45:33 INFO     MSG SET {(1, 0): ['hello']}
+2023-05-28 10:45:33 INFO     ACC COUNTER: {('ACC', 1, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 0): [1]}, ACC RECEIVED:[['ACC', 1, 0, 1]] ACC SENT: [['ACC', 1, 0]]
+2023-05-28 10:45:33 INFO     {'Flag': 'ACC', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': 'fd7f592604d00c11f2b41ea5783ef119b36837abfee4abc3e575307ea007a576'} sento to <10.0.0.2,2>
+2023-05-28 10:45:33 INFO     {'Flag': 'ECHO', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': '71e09f487b50dc1f08fb202d2ddd04507428bff3f3ce57cc14d99e579b6add0f'} sento to <10.0.0.4,4>
+2023-05-28 10:45:33 INFO     Message received by 10.0.0.2: {'Flag': 'ACC', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': 'fd7f592604d00c11f2b41ea5783ef119b36837abfee4abc3e575307ea007a576'}
+2023-05-28 10:45:33 INFO     {'Flag': 'ACC', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': 'bbc046072ae0b12fcd05d25c8d08b0f0c7df75370c00a79bf326541eae97db0a'} sento to <10.0.0.3,3>
+2023-05-28 10:45:33 INFO     ECHOS COUNTER: {('ECHO', 1, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 0): 3}, ECHOS RECEIVED:[['ECHO', 1, 0, 2], ['ECHO', 1, 0, 3], ['ECHO', 1, 0, 1]] ECHOS SENT: [['ECHO', 1, 0]]
+2023-05-28 10:45:33 INFO     ----- EVALUATION CHECKPOINT: message receiving, time: 1685263533585.1238 -----
+2023-05-28 10:45:33 INFO     MSG SET {(1, 0): ['hello']}
+2023-05-28 10:45:33 INFO     Message received by 10.0.0.4: {'Flag': 'ECHO', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': '71e09f487b50dc1f08fb202d2ddd04507428bff3f3ce57cc14d99e579b6add0f'}
+2023-05-28 10:45:33 INFO     ACC COUNTER: {('ACC', 1, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 0): [1, 2]}, ACC RECEIVED:[['ACC', 1, 0, 1], ['ACC', 1, 0, 2]] ACC SENT: [['ACC', 1, 0]]
+2023-05-28 10:45:33 INFO     ECHOS COUNTER: {('ECHO', 1, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 0): 4}, ECHOS RECEIVED:[['ECHO', 1, 0, 2], ['ECHO', 1, 0, 3], ['ECHO', 1, 0, 1], ['ECHO', 1, 0, 4]] ECHOS SENT: [['ECHO', 1, 0]]
+2023-05-28 10:45:33 INFO     MSG SET {(1, 0): ['hello']}
+2023-05-28 10:45:33 INFO     ACC COUNTER: {('ACC', 1, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 0): [1, 2]}, ACC RECEIVED:[['ACC', 1, 0, 1], ['ACC', 1, 0, 2]] ACC SENT: [['ACC', 1, 0]]
+2023-05-28 10:45:33 INFO     Message received by 10.0.0.3: {'Flag': 'ACC', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': 'bbc046072ae0b12fcd05d25c8d08b0f0c7df75370c00a79bf326541eae97db0a'}
+2023-05-28 10:45:33 INFO     {'Flag': 'ACC', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': 'ae2eec7b6cf756e2bfa719c00950fad7a384bac013c9b871d1518ddb93890010'} sento to <10.0.0.4,4>
+2023-05-28 10:45:33 INFO     ECHOS COUNTER: {('ECHO', 1, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 0): 4}, ECHOS RECEIVED:[['ECHO', 1, 0, 2], ['ECHO', 1, 0, 3], ['ECHO', 1, 0, 1], ['ECHO', 1, 0, 4]] ECHOS SENT: [['ECHO', 1, 0]]
+2023-05-28 10:45:33 INFO     MSG SET {(1, 0): ['hello']}
+2023-05-28 10:45:33 INFO     ACC COUNTER: {('ACC', 1, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 0): [1, 2, 3]}, ACC RECEIVED:[['ACC', 1, 0, 1], ['ACC', 1, 0, 2], ['ACC', 1, 0, 3]] ACC SENT: [['ACC', 1, 0]]
+2023-05-28 10:45:33 INFO     ----- MESSAGE DELIVERED, time: 1685263533589.4006, size: 0.08222007751464844
+2023-05-28 10:45:33 INFO     ----- <1,hello,0> -----
+2023-05-28 10:45:33 INFO     BYTES SENT: 2
+2023-05-28 10:45:33 INFO     Message received by 10.0.0.4: {'Flag': 'ACC', 'Source': 1, 'Message': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'SequenceNumber': 0, 'HMAC': 'ae2eec7b6cf756e2bfa719c00950fad7a384bac013c9b871d1518ddb93890010'}
+2023-05-28 10:45:33 INFO     ECHOS COUNTER: {('ECHO', 1, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 0): 4}, ECHOS RECEIVED:[['ECHO', 1, 0, 2], ['ECHO', 1, 0, 3], ['ECHO', 1, 0, 1], ['ECHO', 1, 0, 4]] ECHOS SENT: [['ECHO', 1, 0]]
+2023-05-28 10:45:33 INFO     MSG SET {(1, 0): ['hello']}
+2023-05-28 10:45:33 INFO     ACC COUNTER: {('ACC', 1, '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 0): [1, 2, 3, 4]}, ACC RECEIVED:[['ACC', 1, 0, 1], ['ACC', 1, 0, 2], ['ACC', 1, 0, 3], ['ACC', 1, 0, 4]] ACC SENT: [['ACC', 1, 0]]
+2023-05-28 10:45:33 INFO     BYTES SENT: 2
