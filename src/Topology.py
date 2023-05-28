@@ -13,6 +13,8 @@ from mininet.util import ipAdd, dumpNetConnections
 from subprocess import call, Popen, PIPE
 from threading import Thread
 from mininet.term import makeTerm
+import sys
+import os
 
 CHANNEL_BANDWIDTH = 10  # Mbps
 DELAY = 0.001  # ms
@@ -193,23 +195,32 @@ def remove_node(net, id):
 
 def run_kds(kds_node):
     print("Running KDS...")
+    
+    environment_name = sys.prefix
+    environment_path = os.path.join(environment_name,"bin","activate")
 
     # set up the environment and execute the command using cmd
-    kds_node.cmd(f"source .venv/bin/activate && cd AM/ && python3 KDSMain.py")
+    kds_node.cmd(f"source {environment_path} && cd AM/ && python3 KDSMain.py")
 
     print("KDS terminated-------")
 
 
 def run_sender(sender, algo, payload_size, round, sim_number, kds, kds_ip):
     print(f"--- Executing sender round:{round}, exec:{sim_number}")
+    
+    environment_name = sys.prefix
+    environment_path = os.path.join(environment_name,"bin","activate")
+
     command = ""
     if kds:
-        command = f"source .venv/bin/activate && python3 BRB.py -t S -a {algo} --broadcaster -p {payload_size} -r {round} -s {sim_number} --kds {kds_ip}"
+        command = f"source {environment_path} && python3 BRB.py -t S -a {algo} --broadcaster -p {payload_size} -r {round} -s {sim_number} --kds {kds_ip}"
     else:
-        command = f"source .venv/bin/activate && python3 BRB.py -t S -a {algo} --broadcaster -p {payload_size} -r {round} -s {sim_number}"
+        command = f"source {environment_path} && python3 BRB.py -t S -a {algo} --broadcaster -p {payload_size} -r {round} -s {sim_number}"
 
+    environment_name = sys.prefix
+    
     # set up the environment and execute the command using cmd
-    sender.cmd(command)
+    print(sender.cmd(command))
 
     print("sender terminated-------")
 
@@ -217,14 +228,18 @@ def run_sender(sender, algo, payload_size, round, sim_number, kds, kds_ip):
 def run_receiver(receiver, algo, payload_size, round, sim_number, kds, kds_ip):
     print(f"--- Executing receiver round:{round}, exec:{sim_number}")
 
+    environment_name = sys.prefix
+    environment_path = os.path.join(environment_name,"bin","activate")
+
     command = ""
     if kds:
-        command = f"source .venv/bin/activate && python3 BRB.py -t S -a {algo} -p {payload_size} -r {round} -s {sim_number} --kds {kds_ip}"
+        command = f"source {environment_path} && python3 BRB.py -t S -a {algo} -p {payload_size} -r {round} -s {sim_number} --kds {kds_ip}"
     else:
-        command = f"source .venv/bin/activate && python3 BRB.py -t S -a {algo} -p {payload_size} -r {round} -s {sim_number}"
+        command = f"source {environment_path} && python3 BRB.py -t S -a {algo} -p {payload_size} -r {round} -s {sim_number}"
 
+    
     # set up the environment and execute the command using cmd
-    receiver.cmd(command)
+    print(receiver.cmd(command))
 
     print("receiver terminated-------")
 

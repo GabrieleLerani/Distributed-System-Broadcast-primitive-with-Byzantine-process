@@ -85,8 +85,17 @@ def clean_debug_folder(root):
 
 
 def clean_simulation_folder(algorithms):
+
+    for f in algorithms:
+        file_list = os.listdir(f)
+        if "simulations" not in file_list:
+            path = os.path.join(f, "simulations")
+            make_dir(path)
+
     for f in algorithms:
         for filename in os.listdir(f):
+            
+
             if filename == "simulations":
                 path = os.path.join(f, filename)
                 for file_in_sim in os.listdir(path):
@@ -101,7 +110,8 @@ def clean_simulation_folder(algorithms):
                         print("Failed to delete %s. Reason: %s" % (file_path, e))
 
                 break
-
+            
+                
 
 # create a directory if it doesn't exist
 def make_dir(path):

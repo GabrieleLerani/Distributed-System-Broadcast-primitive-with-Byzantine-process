@@ -7,6 +7,7 @@ import pandas as pd
 import time
 import matplotlib.pyplot as plt
 from matplotlib import style
+import utils
 
 PROCESS_STATS = 20
 
@@ -140,6 +141,12 @@ class Evaluation:
     # The following function gets execution time from log file
     # of each process and writes them in a file
     def create_stats_file(self):
+
+        files = os.listdir()
+        if "stats-result" not in files:
+            utils.make_dir("stats-result")
+        
+
         for algo in self.algorithms:
             # Write columns on stats file
             self.__write_stats_on_file(algo)
