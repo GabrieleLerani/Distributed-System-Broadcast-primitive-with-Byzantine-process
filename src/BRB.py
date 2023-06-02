@@ -1,14 +1,21 @@
 # import bracha algorithm
 from BRACHA.Process import Process as Bracha
+from BRACHA.byzantine.SilentByzantineProcess import ByzantineProcess as BRACHASilentByzantine
 
 # import AM with 2 round
 from AM.Process import Process as AuthenticatedMessages
 
-# import erasure code algorithm
+# import erasure code algorithm and byzantine
 from EC.Process import Process as ErasureCode
+from EC.byzantine.ByzantineProcess import ByzantineProcess as ECByzantineProcess
+from EC.byzantine.SilentByzantineProcess import ByzantineProcess as ECSilentByzantine
+from EC.byzantine.ByzantineSender import ByzantineProcess as ECSenderByzantineProcess
 
-# import hash based algorithm
+# import hash based algorithm and byzantine
 from HB.Process import Process as HashBased
+from HB.byzantine.ByzantineProcess import ByzantineProcess as HBByzantineProcess
+from HB.byzantine.SilentByzantineProcess import ByzantineProcess as HBSilentByzantine
+from HB.byzantine.ByzantineSender import ByzantineProcess as HBSenderByzantineProcess
 
 
 # import other useful module
@@ -18,7 +25,7 @@ import time
 import argparse
 import utils as MainUtils
 
-EXECUTION_TIME_BEFORE_BROADCAST = 0.8
+EXECUTION_TIME_BEFORE_BROADCAST = 1
 
 
 if __name__ == "__main__":
@@ -78,12 +85,21 @@ if __name__ == "__main__":
         action="store_true",
         help="defines if you are broadcaster or not",
     )
+
+    parser.add_argument(
+        "-f",
+        "--faulty",
+        choices=["SILENT","FORGER","SENDER",],
+        help="defines if you want to act as a byzantine or not. SILENT is a process who receives message but doesn't replay nothing, FORGER replays different messages from the one received and SENDER is used to allow broadcaster to send more than two messages ",
+    )
+
     parser.add_argument(
         "-n",
         "--number",
         type=int,
         help="number of processes, it must be specified only by broadcaster",
     )
+
     parser.add_argument(
         "-k",
         "--kds",
@@ -133,8 +149,12 @@ if __name__ == "__main__":
         end_time = 20
         match algo:
             case "BRACHA":
+                
                 folder = "BRACHA"
-                p = Bracha()
+                if args.faulty == "SILENT":
+                    p = BRACHASilentByzantine()
+                else:
+                    p = Bracha()
 
             case "AM":
                 kds_ip = args.kds
@@ -151,11 +171,28 @@ if __name__ == "__main__":
 
             case "HB":
                 folder = "HB"
-                p = HashBased()
+                if args.faulty == "SILENT":
+                    p = HBSilentByzantine()
+                elif args.faulty == "FORGER":
+                    p = HBByzantineProcess()
+                elif args.faulty == "SENDER":
+                    p = HBSenderByzantineProcess()
+                    
+                else:
+                    p = HashBased()
 
             case "EC":
                 folder = "EC"
-                p = ErasureCode()
+                if args.faulty == "SILENT":
+                    p = ECSilentByzantine()
+                elif args.faulty == "FORGER":
+                    p = ECByzantineProcess()
+                elif args.faulty == "SENDER":
+                    p = ECSenderByzantineProcess()
+
+                else:
+                    p = ErasureCode()
+                
 
         # process is broadcaster
         if args.broadcaster:
@@ -218,11 +255,14 @@ if __name__ == "__main__":
 
         p = None
         folder = ""
-        end_time = 6
+        end_time = 4
         match algo:
             case "BRACHA":
                 folder = "BRACHA"
-                p = Bracha()
+                if args.faulty == "SILENT":
+                    p = BRACHASilentByzantine()
+                else:
+                    p = Bracha()
 
             case "AM":
                 folder = "AM"
@@ -233,16 +273,35 @@ if __name__ == "__main__":
                         "Error: --kds is required for AM, you need to specify kds's ip, type --help for more instructions"
                     )
                     parser.exit()
+
+                if args.faulty:
+                    pass
                 end_time = 2 * end_time
                 p = AuthenticatedMessages(kds_ip)
 
             case "HB":
                 folder = "HB"
-                p = HashBased()
+                if args.faulty == "SILENT":
+                    p = HBSilentByzantine()
+                elif args.faulty == "FORGER":
+                    p = HBByzantineProcess()
+                elif args.faulty == "SENDER":
+                    p = HBSenderByzantineProcess()
+                    
+                else:
+                    p = HashBased()
 
             case "EC":
                 folder = "EC"
-                p = ErasureCode()
+                if args.faulty == "SILENT":
+                    p = ECSilentByzantine()
+                elif args.faulty == "FORGER":
+                    p = ECByzantineProcess()
+                elif args.faulty == "SENDER":
+                    p = ECSenderByzantineProcess()
+
+                else:
+                    p = ErasureCode()
 
         MainUtils.set_process_logging(folder, payload_size, round, simulation)
 
