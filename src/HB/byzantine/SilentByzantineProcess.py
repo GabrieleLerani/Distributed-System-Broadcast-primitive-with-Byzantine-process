@@ -1,4 +1,5 @@
-from Process import Process
+import logging
+from HB.Process import Process
 
 
 RCV_BUFFER_SIZE = 16384
@@ -13,19 +14,23 @@ class ByzantineProcess(Process):
         super().__init__()
 
     def receiving_msg(self, message, id):
-        print("<", message, "> is the MSG received from ", id)
+        logging.info("%s is the MSG received from %d",message,id)
+        
 
     def receiving_echo(self, echo, id):
         if self.first(echo, "ECHO", id):
-            print("<", echo, "> is the ECHO received from ", id)
+            logging.info("%s is the ECHO received from %d",echo,id)
+            
 
     def receiving_acc(self, acc, id):
         if self.first(acc, "ACC", id):
-            print("<", acc, "> is the ACC received from ", id)
+            logging.info("%s is the ACC received from %d",acc,id)
+            
 
     def receiving_req(self, req, id):
         if self.first(req, "REQ", id):
-            print("<", req, "> is the REQ received from ", id)
+            logging.info("%s is the REQ received from %d",req,id)
+            
 
     def first(self, message, flag, sender):
         if flag == "ECHO":

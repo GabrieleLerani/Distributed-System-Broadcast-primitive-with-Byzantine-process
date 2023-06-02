@@ -1,7 +1,8 @@
 import hashlib
 import logging
 import time
-from Process import Process
+import HB.utils as utils
+from HB.Process import Process
 
 
 RCV_BUFFER_SIZE = 16384
@@ -14,7 +15,7 @@ BROADCAST_ID = 1
 class ByzantineProcess(Process):
     def __init__(self):
         super().__init__()
-        self.byz_mess = "byz mess"
+        self.byz_mess = utils.generate_payload(256)
 
     # message must be a string
     @staticmethod
@@ -47,7 +48,7 @@ class ByzantineProcess(Process):
                     ["ECHO", message["Source"], message["SequenceNumber"]]
                 )
                 hashed_message = self.__hash(self.byz_mess)
-
+                print("SENDING BYZANTINE")
                 packet = {
                     "Flag": "ECHO",
                     "Source": self.selfid,  # TODO Non sono sicuro che self.selfid sia riconsciuto da una classe figlia
@@ -168,7 +169,7 @@ class ByzantineProcess(Process):
                             self.delivered = True
 
                             print(
-                                f"-----Message Delivered: {msg}-----",
+                                f"-----MESSAGE DELIVERED: {msg} -----",
                             )
 
                             peak = self.eval.tracing_mem()
