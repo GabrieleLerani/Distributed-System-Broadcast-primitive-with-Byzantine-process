@@ -135,7 +135,8 @@ class Evaluation:
                 if match:
                     end_time = float(match.group(1))
                     mem_peak_size = float(match.group(2))
-
+        
+        
         return [end_time - start_time, mem_peak_size, max(bytes_sent)]
 
     # The following function gets execution time from log file
@@ -175,7 +176,7 @@ class Evaluation:
                         time_avg,
                         peak_avg,
                         bw_avg,
-                        2 * (round + 1),
+                        2 * (round + 1),# TODO change for file stats
                         size,
                         round,
                         simulation,

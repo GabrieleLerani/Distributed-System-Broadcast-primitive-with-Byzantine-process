@@ -1,6 +1,7 @@
 # import bracha algorithm
 from BRACHA.Process import Process as Bracha
 from BRACHA.byzantine.SilentByzantineProcess import ByzantineProcess as BRACHASilentByzantine
+from BRACHA.byzantine.ByzantineProcess import ByzantineProcess as BRACHAByzantineProcess
 
 # import AM with 2 round
 from AM.Process import Process as AuthenticatedMessages
@@ -153,6 +154,8 @@ if __name__ == "__main__":
                 folder = "BRACHA"
                 if args.faulty == "SILENT":
                     p = BRACHASilentByzantine()
+                elif args.faulty == "FORGER":
+                    p = BRACHAByzantineProcess()
                 else:
                     p = Bracha()
 
@@ -261,6 +264,8 @@ if __name__ == "__main__":
                 folder = "BRACHA"
                 if args.faulty == "SILENT":
                     p = BRACHASilentByzantine()
+                elif args.faulty == "FORGER":
+                    p = BRACHAByzantineProcess()
                 else:
                     p = Bracha()
 

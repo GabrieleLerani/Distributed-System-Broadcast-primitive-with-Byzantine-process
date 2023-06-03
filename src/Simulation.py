@@ -4,12 +4,12 @@ import Evaluation
 import Topology
 
 
-SIMULATION_NUMBER = 20  # number of simulation for each number of process
-MIN_PROC_NUMBER = 4  # minimum number of process to run simulation, must be even
+SIMULATION_NUMBER = 10  # number of simulation for each number of process
+MIN_PROC_NUMBER = 20  # minimum number of process to run simulation, must be even
 MAX_PROC_NUMBER = 20  # maximum number of process to run simulation, must be even
 
 payload_size = (2048, 1024, 512, 256)
-algorithms = ("EC", "HB", "BRACHA")
+algorithms = ("EC","HB","BRACHA")
 
 
 def setup_simulation_environment():
@@ -26,6 +26,11 @@ def setup_simulation_environment():
 
 
 def start_simulation():
+    
+    get_faulty = str(input("Do you want to execute simulation with (n - 1)/3 byzantine processes? [Y/n] "))
+    faulty_simulations = get_faulty == "Y"
+        
+
     for algo in algorithms:
         print(f"----------- SIMULATION FOR {algo} -----------")
         for size in payload_size:
@@ -60,6 +65,7 @@ def start_simulation():
                         round,
                         sim_number,
                         2 * MAX_PROC_NUMBER + i + j,  # KDS ip
+                        faulty_simulations,
                     )
 
             Topology.free_space(net)

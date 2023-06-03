@@ -15,12 +15,14 @@ from threading import Thread
 from mininet.term import makeTerm
 import sys
 import os
+import math
 
 CHANNEL_BANDWIDTH = 10  # Mbps
 DELAY = 0.001  # ms
 
 setLogLevel("warning")
 
+faulty = "FORGER"
 
 # Create a single switch topology
 def create_single_network(N):
@@ -124,7 +126,7 @@ def add_processes(net, N):
 
 # To run hosts I need mininet instance, message, round and simulation number
 # are used to initialize debug folder for each process during the simulation
-def run_hosts(net, algo, size, round, sim_number, kds_id):
+def run_hosts(net, algo, size, round, sim_number, kds_id,run_with_faulty):
     hosts = net.hosts
     hosts_num = len(hosts) + 1
     threads = []  # Store the threads for synchronization
@@ -160,6 +162,10 @@ def run_hosts(net, algo, size, round, sim_number, kds_id):
         else:
             receiver = net.get("h%i" % i)
 
+            is_faulty = False
+            if run_with_faulty and i < math.floor((hosts_num - 1) / 3):
+                is_faulty = True
+
             t = Thread(
                 target=run_receiver,
                 args=(
@@ -170,6 +176,7 @@ def run_hosts(net, algo, size, round, sim_number, kds_id):
                     sim_number,
                     kds,
                     kds_ip,
+                    is_faulty,
                 ),
             )
             t.start()
@@ -220,26 +227,29 @@ def run_sender(sender, algo, payload_size, round, sim_number, kds, kds_ip):
     environment_name = sys.prefix
     
     # set up the environment and execute the command using cmd
-    print(sender.cmd(command))
+    sender.cmd(command)
 
     print("sender terminated-------")
 
 
-def run_receiver(receiver, algo, payload_size, round, sim_number, kds, kds_ip):
+def run_receiver(receiver, algo, payload_size, round, sim_number, kds, kds_ip,is_faulty):
     print(f"--- Executing receiver round:{round}, exec:{sim_number}")
 
     environment_name = sys.prefix
     environment_path = os.path.join(environment_name,"bin","activate")
 
     command = ""
-    if kds:
-        command = f"source {environment_path} && python3 BRB.py -t S -a {algo} -p {payload_size} -r {round} -s {sim_number} --kds {kds_ip}"
+    if is_faulty:
+        command = f"source {environment_path} && python3 BRB.py -t S -f {faulty} -a {algo} -p {payload_size} -r {round} -s {sim_number}"
     else:
-        command = f"source {environment_path} && python3 BRB.py -t S -a {algo} -p {payload_size} -r {round} -s {sim_number}"
+        if kds:
+            command = f"source {environment_path} && python3 BRB.py -t S -a {algo} -p {payload_size} -r {round} -s {sim_number} --kds {kds_ip}"
+        else:
+            command = f"source {environment_path} && python3 BRB.py -t S -a {algo} -p {payload_size} -r {round} -s {sim_number}"
 
     
     # set up the environment and execute the command using cmd
-    print(receiver.cmd(command))
+    receiver.cmd(command)
 
     print("receiver terminated-------")
 
