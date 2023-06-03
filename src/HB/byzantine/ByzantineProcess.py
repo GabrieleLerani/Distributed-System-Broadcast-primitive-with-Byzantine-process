@@ -48,7 +48,7 @@ class ByzantineProcess(Process):
                     ["ECHO", message["Source"], message["SequenceNumber"]]
                 )
                 hashed_message = self.__hash(self.byz_mess)
-                print("SENDING BYZANTINE")
+                
                 packet = {
                     "Flag": "ECHO",
                     "Source": self.selfid,  # TODO Non sono sicuro che self.selfid sia riconsciuto da una classe figlia
@@ -179,6 +179,4 @@ class ByzantineProcess(Process):
                                 peak,
                             )
 
-                            logging.info(
-                                "----- <%s,%s,%d> -----", source, msg, sequence_number
-                            )
+                        logging.info("BYTES SENT: %d", self.get_bytes_sent() / 1024)
