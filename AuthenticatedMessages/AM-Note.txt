@@ -1,5 +1,0 @@
-signed_vote_messages_container--> [{message_from:{message received}},{message_from:{message received}},...,{message_from:{message received}}]
-every element of the list denotes the signed vote messages collected from a process(received by this process)
-this element is a dictionary containing elements like key=message_from:value=,message received
-messge received is a dict because a message sent is a dict with different fields
-the key is equal to the value in the most inner dict because a process can receive different signed messages(e.g v,v') from a process
