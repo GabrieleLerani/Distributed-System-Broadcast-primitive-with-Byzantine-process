@@ -28,7 +28,8 @@ if __name__ == "__main__":
         "-t",
         "--type",
         choices=["N"],
-        help="N stays for normal execution and S for simulation execution, notice that normal is used when you want to try the application, otherwise simulation execution is used by Simulation.py script and it must not be used by a normal user, it's just a way to automatically initialize process tasks",
+        required=True,
+        help="N stays for normal execution, you have to specify if you are trying AM protocls ",
     )
 
     # Parse the command-line arguments
@@ -36,7 +37,7 @@ if __name__ == "__main__":
 
     end_time = 15
     if args.type:
-        end_time = 40
+        end_time = 50
 
     utils.clean_debug_folder()
     # dummy main for starting servers
