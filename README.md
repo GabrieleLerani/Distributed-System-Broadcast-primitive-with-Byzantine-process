@@ -1,3 +1,32 @@
+# Broadcast primitive with Byzantine processes
+## Overview
+Byzantine fault-tolerant algorithms, particularly those related to broadcast, are relevant for modern applications due to the increasing complexity and interconnectivity of distributed systems. In the context of Byzantine processes, where some nodes may exhibit arbitrary and malicious behavior, broadcast algorithms play a crucial role in ensuring the reliability and integrity of communication. <br>
+In blockchain systems, Byzantine fault tolerance is a key consideration. Broadcast algorithms contribute to the consensus mechanisms that ensure all nodes agree on the state of the distributed ledger, even in the presence of malicious actors.
+## Goal
+Carry out a dependability evaluation (performance and functionality) of alternative
+solutions to the Byzantine Reliable Broadcast problem, comparing a solution
+assuming authenticated messages with others considering authenticated links.
+Consider the following protocols in the evaluation:
+- Authenticated Links - Double Echo (Bracha)
+- Authenticated Messages - https://arxiv.org/pdf/2102.07240.pdf (page 7)
+- Hash Based https://arxiv.org/abs/2007.14990
+- Erasure code base https://arxiv.org/abs/2007.14990
+## Result
+We implemented all in python and we used mininet for simulations with 20 processes placed using a star topology
+
+Metrics: time (ms), memory peak (MB), Bandwidth (KB/s)
+Payload (Bytes):
+- 256
+- 512
+- 1024
+- 2048
+
+The plot below shows how AM (Authenticated messages) is very slow due to the usage of digital signature compared to all the other. Even though it guarantees the requirement of non-repudiation. The algorithm that shows the greatest scalability appears to be the HB (hash based) due to fixed size messages.
+
+![BAR-BW-1GB-20-proc](https://github.com/GabrieleLerani/Distributed-System-Broadcast-primitive-with-Byzantine-process/assets/92364167/6f1557b5-ad56-4636-8fb1-6108c91c1d33)
+
+
+## Usage
 First you have to clone or download git repository then do the following commands:
 1) Install python and pip if you don't have with:
 	```shell
