@@ -12,7 +12,7 @@ Consider the following protocols in the evaluation:
 - Hash Based https://arxiv.org/abs/2007.14990
 - Erasure code base https://arxiv.org/abs/2007.14990
 ## Result
-We implemented all in python and we used mininet for simulations with 20 processes placed using a star topology
+We implemented all in python and we used mininet for simulations with 20 hosts placed using a star topology
 
 Metrics: time (ms), memory peak (MB), Bandwidth (KB/s)
 Payload (Bytes):
